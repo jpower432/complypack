@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  issues: none
+  pull-requests: none
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.22', '1.23']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Build
+      run: go build ./...
+
+    - name: Vet
+      run: go vet ./...
+
+    - name: Test
+      run: go test -race -count=1 ./...
+
+    - name: Coverage
+      if: matrix.go-version == '1.23'
+      run: |
+        go test -race -coverprofile=coverage.out -covermode=atomic ./...
+        go tool cover -func=coverage.out | tail -1
+
+    - name: Upload coverage
+      if: matrix.go-version == '1.23'
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage.out
+        fail_ci_if_error: false
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  call_reusable_ci:
+    name: Standardized CI
+    uses: complytime/org-infra/.github/workflows/reusable_ci.yml@main
+    permissions:
+      contents: read
+      issues: read
+
+  call_reusable_security:
+    name: Security Scan
+    uses: complytime/org-infra/.github/workflows/reusable_security.yml@main
+    permissions:
+      contents: read
+      id-token: write
+      security-events: write
+
+  call_reusable_vuln_scan:
+    name: Vulnerability Scan
+    uses: complytime/org-infra/.github/workflows/reusable_vuln_scan.yml@main
+    permissions:
+      contents: read
