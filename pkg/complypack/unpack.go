@@ -37,8 +37,10 @@ func Unpack(ctx context.Context, store content.ReadOnlyStorage, desc ocispec.Des
 		opt(options)
 	}
 
-	// TODO: Handle verification if options.verifyKeyPath or options.verifyCertPath set
-	// For now, skip verification
+	// Verify signature if requested
+	if err := verify(ctx, store, desc, options); err != nil {
+		return nil, err
+	}
 
 	// Fetch manifest
 	manifestData, err := content.FetchAll(ctx, store, desc)
