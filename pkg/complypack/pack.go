@@ -17,13 +17,19 @@ import (
 	"oras.land/oras-go/v2/errdef"
 )
 
+const (
+	// MaxContentSize is the maximum allowed content size (100MB).
+	// Prevents memory exhaustion attacks via unbounded content.
+	MaxContentSize = 100 * 1024 * 1024
+)
+
 // Pack assembles a ComplyPack OCI artifact from config and opaque content.
 // The content is stored as a single layer with MediaTypeContent.
 // The config is stored with MediaTypeConfig.
 //
 // Memory Usage: Pack loads the entire content into memory for digest calculation.
-// For large policy bundles (>100MB), this may cause memory pressure. Consider
-// the memory requirements when packing large artifacts.
+// Content size is limited to MaxContentSize (100MB) to prevent memory exhaustion.
+// Returns ErrContentTooLarge if content exceeds this limit.
 //
 // Options:
 //   - WithSigning(keyPath) enables keyed signing
@@ -43,13 +49,18 @@ func Pack(ctx context.Context, store content.Storage, cfg Config, content io.Rea
 		opt(options)
 	}
 
-	// Read content into memory (needed for digest calculation)
-	contentBytes, err := io.ReadAll(content)
+	// Read content with size limit to prevent memory exhaustion
+	limitedReader := io.LimitReader(content, MaxContentSize+1)
+	contentBytes, err := io.ReadAll(limitedReader)
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("reading content: %w", err)
 	}
 	if len(contentBytes) == 0 {
 		return ocispec.Descriptor{}, ErrEmptyContent
+	}
+	if int64(len(contentBytes)) > MaxContentSize {
+		return ocispec.Descriptor{}, fmt.Errorf("%w: content size %d exceeds maximum %d bytes",
+			ErrContentTooLarge, len(contentBytes), MaxContentSize)
 	}
 
 	// Push config blob

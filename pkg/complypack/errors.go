@@ -11,6 +11,9 @@ var (
 	// ErrEmptyContent is returned when the content reader provides zero bytes.
 	ErrEmptyContent = errors.New("complypack: content must not be empty")
 
+	// ErrContentTooLarge is returned when content exceeds maximum size.
+	ErrContentTooLarge = errors.New("complypack: content exceeds maximum size")
+
 	// ErrVerificationFailed is returned when signature verification fails.
 	ErrVerificationFailed = errors.New("complypack: signature verification failed")
 

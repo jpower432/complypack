@@ -5,6 +5,7 @@ package complypack_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -128,6 +129,33 @@ func TestPackErrors(t *testing.T) {
 	})
 
 	t.Run("empty content", func(t *testing.T) {
+		cfg := complypack.Config{
+			EvaluatorID: "io.complytime.opa",
+			Version:     "1.0.0",
+		}
+		content := bytes.NewReader([]byte{})
+
+		_, err := complypack.Pack(ctx, store, cfg, content)
+		if !errors.Is(err, complypack.ErrEmptyContent) {
+			t.Errorf("Pack() error = %v, want ErrEmptyContent", err)
+		}
+	})
+
+	t.Run("content too large", func(t *testing.T) {
+		cfg := complypack.Config{
+			EvaluatorID: "io.complytime.opa",
+			Version:     "1.0.0",
+		}
+		// Create content larger than MaxContentSize (100MB)
+		largeContent := strings.NewReader(strings.Repeat("x", complypack.MaxContentSize+1))
+
+		_, err := complypack.Pack(ctx, store, cfg, largeContent)
+		if !errors.Is(err, complypack.ErrContentTooLarge) {
+			t.Errorf("Pack() error = %v, want ErrContentTooLarge", err)
+		}
+	})
+
+	t.Run("empty content - old test", func(t *testing.T) {
 		cfg := complypack.Config{
 			EvaluatorID: "io.complytime.opa",
 			Version:     "1.0.0",
