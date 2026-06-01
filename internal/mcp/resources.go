@@ -50,7 +50,7 @@ func (rs *ResourceStore) ListResources(ctx context.Context) ([]mcp.Resource, err
 }
 
 // ReadResource returns the content for a specific resource URI.
-func (rs *ResourceStore) ReadResource(ctx context.Context, uri string) ([]mcp.ResourceContents, error) {
+func (rs *ResourceStore) ReadResource(ctx context.Context, uri string) ([]*mcp.ResourceContents, error) {
 	// Parse URI: complypack://catalog/<name> or complypack://schema/<platform>
 	if !strings.HasPrefix(uri, URIScheme+"://") {
 		return nil, fmt.Errorf("invalid URI scheme: expected %s://", URIScheme)
@@ -71,7 +71,7 @@ func (rs *ResourceStore) ReadResource(ctx context.Context, uri string) ([]mcp.Re
 		if !ok {
 			return nil, fmt.Errorf("catalog %q not found", name)
 		}
-		return []mcp.ResourceContents{{
+		return []*mcp.ResourceContents{{
 			URI:      uri,
 			MIMEType: MIMETypeYAML,
 			Text:     string(data),
@@ -82,7 +82,7 @@ func (rs *ResourceStore) ReadResource(ctx context.Context, uri string) ([]mcp.Re
 		if !ok {
 			return nil, fmt.Errorf("schema %q not found", name)
 		}
-		return []mcp.ResourceContents{{
+		return []*mcp.ResourceContents{{
 			URI:      uri,
 			MIMEType: MIMETypeJSONSchema,
 			Text:     string(data),
