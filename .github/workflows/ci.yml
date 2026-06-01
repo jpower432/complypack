@@ -40,7 +40,7 @@ jobs:
 
       - name: Run acceptance tests
         run: |
-          go install github.com/onsi/ginkgo/v2/ginkgo@latest
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.29.0
           ginkgo -v acceptance/
 
       - name: Coverage
