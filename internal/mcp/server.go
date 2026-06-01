@@ -159,6 +159,12 @@ func extractCatalogName(data []byte) (string, error) {
 	return parsed.Metadata.ID, nil
 }
 
+// Run starts the MCP server on the given transport.
+// It delegates to the underlying MCP SDK server's Run method.
+func (s *Server) Run(ctx context.Context, transport mcp.Transport) error {
+	return s.mcp.Run(ctx, transport)
+}
+
 // loadSchemas loads all built-in platform schemas.
 func loadSchemas() (map[string][]byte, error) {
 	schemaMap := make(map[string][]byte)
