@@ -13,7 +13,7 @@ import (
 func TestResourceStore_ListResources(t *testing.T) {
 	catalogs := map[string][]byte{
 		"controls-v1": []byte("catalog: controls-v1\ncontrols: []"),
-		"security-v2":    []byte("catalog: security-v2\ncontrols: []"),
+		"security-v2": []byte("catalog: security-v2\ncontrols: []"),
 	}
 
 	schemas := map[string][]byte{

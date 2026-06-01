@@ -25,7 +25,7 @@ platform-schemas:
   - name: ssp
     path: ./schemas/ssp.json
 `
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	err := os.WriteFile(configPath, []byte(configContent), 0600)
 	require.NoError(t, err)
 
 	config, err := LoadConfig(configPath)
@@ -49,7 +49,7 @@ gemara-catalogs:
   - name: nist-800-53
     path: ./catalogs/nist-800-53.yaml
 `
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	err := os.WriteFile(configPath, []byte(configContent), 0600)
 	require.NoError(t, err)
 
 	config, err := LoadConfig(configPath)
@@ -68,7 +68,7 @@ func TestLoadConfig_MissingPlatform(t *testing.T) {
   - name: nist-800-53
     path: ./catalogs/nist-800-53.yaml
 `
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	err := os.WriteFile(configPath, []byte(configContent), 0600)
 	require.NoError(t, err)
 
 	config, err := LoadConfig(configPath)
@@ -83,7 +83,7 @@ func TestLoadConfig_MissingCatalogs(t *testing.T) {
 
 	configContent := `platform: oscal
 `
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	err := os.WriteFile(configPath, []byte(configContent), 0600)
 	require.NoError(t, err)
 
 	config, err := LoadConfig(configPath)
