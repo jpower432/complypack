@@ -118,10 +118,10 @@ This allows users with `regal` installed to get style warnings without forcing i
 
 1. **Hybrid approach** (SDK for validation, subprocess for testing):
    - **Rejected**: Adds complexity, forces CLI dependency anyway
-   
+
 2. **Always subprocess** (like `conftest` wrapper):
    - **Rejected**: Contract validation needs AST access (CLI doesn't expose it)
-   
+
 3. **Embed `opa` binary** (package CLI in our binary):
    - **Rejected**: Worse than SDK (still subprocess overhead + binary bloat)
 

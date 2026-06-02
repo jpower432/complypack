@@ -16,10 +16,10 @@ import (
 
 // FixtureResults contains fixture-based test results.
 type FixtureResults struct {
-	Total  int              // Total number of fixtures tested
-	Passed int              // Number of passing fixtures
-	Failed int              // Number of failing fixtures
-	Errors []FixtureError   // Error details for failing fixtures
+	Total  int            // Total number of fixtures tested
+	Passed int            // Number of passing fixtures
+	Failed int            // Number of failing fixtures
+	Errors []FixtureError // Error details for failing fixtures
 }
 
 // FixtureError describes a fixture test failure.
@@ -83,8 +83,8 @@ func RunFixtures(ctx context.Context, fixtureDir string, policyDir string) (*Fix
 		if err != nil {
 			results.Failed++
 			results.Errors = append(results.Errors, FixtureError{
-				Fixture: name,
-				Expected: expected,
+				Fixture:    name,
+				Expected:   expected,
 				Violations: []string{err.Error()},
 			})
 			continue
@@ -117,7 +117,7 @@ func loadPolicies(dir string) (map[string]string, error) {
 			return err
 		}
 		if !info.IsDir() && strings.HasSuffix(path, ".rego") {
-			content, err := os.ReadFile(path)
+			content, err := os.ReadFile(path) //nolint:gosec // G122: path is validated by filepath.Walk
 			if err != nil {
 				return fmt.Errorf("failed to read %s: %w", path, err)
 			}

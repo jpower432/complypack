@@ -14,12 +14,12 @@ func TestRun(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name        string
-		files       map[string]string
-		wantTotal   int
-		wantPassed  int
-		wantFailed  int
-		wantErr     bool
+		name       string
+		files      map[string]string
+		wantTotal  int
+		wantPassed int
+		wantFailed int
+		wantErr    bool
 	}{
 		{
 			name: "all tests pass",

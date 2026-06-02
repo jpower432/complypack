@@ -17,8 +17,8 @@ type mockEvaluator struct {
 	id string
 }
 
-func (m *mockEvaluator) ID() string                                                             { return m.id }
-func (m *mockEvaluator) Validate(filename string, src string) []error                           { return nil }
+func (m *mockEvaluator) ID() string                                   { return m.id }
+func (m *mockEvaluator) Validate(filename string, src string) []error { return nil }
 func (m *mockEvaluator) CheckContract(filename string, src string, schema cue.Value) ([]ContractViolation, error) {
 	return nil, nil
 }
@@ -26,7 +26,7 @@ func (m *mockEvaluator) Test(ctx context.Context, files map[string]string) (*Tes
 	return &TestResults{}, nil
 }
 func (m *mockEvaluator) Lint(filename string, src string) ([]LintWarning, error) { return nil, nil }
-func (m *mockEvaluator) FileExtension() string                                    { return ".mock" }
+func (m *mockEvaluator) FileExtension() string                                   { return ".mock" }
 
 func TestNewRegistry(t *testing.T) {
 	r := NewRegistry()

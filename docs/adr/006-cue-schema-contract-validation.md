@@ -90,11 +90,11 @@ If policy references `input.spec.invalidField`:
 
 **Implementation:**
 
-- **`internal/validator/contract.go`**: 
+- **`internal/validator/contract.go`**:
   - `extractInputRefs()`: Walks OPA AST to find all `input.*` refs
   - `pathExistsInSchema()`: Iterates CUE fields to validate paths (handles optional fields)
   - `buildPath()`: Converts AST references to dotted notation
-- **`schemas/embed.go`**: 
+- **`schemas/embed.go`**:
   - `GetBuiltInCUESchema()`: Loads CUE source files from `schemas/cue/*.cue`
   - Existing: `GetBuiltInSchema()` for JSON Schema (backward compat)
 
