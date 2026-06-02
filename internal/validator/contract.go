@@ -134,7 +134,7 @@ func pathExistsInSchema(path string, schema cue.Value) bool {
 
 		found := false
 		for iter.Next() {
-			if iter.Label() == part {
+			if iter.Selector().Unquoted() == part {
 				current = iter.Value()
 				found = true
 				break

@@ -45,16 +45,16 @@ We use the **OPA Go SDK in-process** for all policy operations:
 
 **Rationale:**
 
-| Criterion | In-Process SDK | Subprocess CLI |
-|-----------|----------------|----------------|
-| **Performance** | ✅ No process spawn overhead | ❌ ~50-100ms per invocation |
-| **Error handling** | ✅ Typed errors, structured data | ❌ Parse stdout/stderr strings |
-| **Determinism** | ✅ Same Go version = same behavior | ❌ Depends on `opa` in `$PATH` |
-| **Testability** | ✅ Unit tests, no mocks needed | ❌ Requires `opa` binary in CI |
-| **AST access** | ✅ Direct AST for contract validation | ❌ Would need `opa parse --format json` |
-| **Cancellation** | ✅ `context.Context` propagation | ❌ Manual `cmd.Cancel()` handling |
-| **Memory control** | ✅ Share memory pool | ❌ Each process allocates separately |
-| **Versioning** | ✅ `go.mod` locks OPA version | ❌ Runtime dependency on system `opa` |
+| Criterion          | In-Process SDK                       | Subprocess CLI                           |
+|--------------------|--------------------------------------|------------------------------------------|
+| **Performance**    | ✅ No process spawn overhead          | ❌ ~50-100ms per invocation               |
+| **Error handling** | ✅ Typed errors, structured data      | ❌ Parse stdout/stderr strings            |
+| **Determinism**    | ✅ Same Go version = same behavior    | ❌ Depends on `opa` in `$PATH`            |
+| **Testability**    | ✅ Unit tests, no mocks needed        | ❌ Requires `opa` binary in CI            |
+| **AST access**     | ✅ Direct AST for contract validation | ❌ Would need `opa parse --format json`   |
+| **Cancellation**   | ✅ `context.Context` propagation      | ❌ Manual `cmd.Cancel()` handling         |
+| **Memory control** | ✅ Share memory pool                  | ❌ Each process allocates separately      |
+| **Versioning**     | ✅ `go.mod` locks OPA version         | ❌ Runtime dependency on system `opa`     |
 
 **Key Benefits:**
 
