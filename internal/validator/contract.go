@@ -134,7 +134,8 @@ func pathExistsInSchema(path string, schema cue.Value) bool {
 
 		found := false
 		for iter.Next() {
-			if iter.Selector().Unquoted() == part {
+			//nolint:staticcheck // SA1019: Label() is deprecated, but Selector().Unquoted() panics on non-string labels
+			if iter.Label() == part {
 				current = iter.Value()
 				found = true
 				break
