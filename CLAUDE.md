@@ -32,7 +32,6 @@ Assisted-by: Claude (Anthropic, Claude 3.5 Sonnet 4.5)
 ### Never Commit
 
 - Secrets, API keys, tokens
-- ESS references (blocked by gitleaks)
 - Temporary files, build artifacts
 - Large binaries without approval
 
