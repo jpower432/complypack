@@ -122,7 +122,7 @@ func TestPackErrors(t *testing.T) {
 
 	t.Run("empty content", func(t *testing.T) {
 		cfg := complypack.Config{
-		ID:          "io.test.pack",
+			ID:          "io.test.pack",
 			EvaluatorID: "io.complytime.opa",
 			Version:     "1.0.0",
 		}
@@ -134,7 +134,7 @@ func TestPackErrors(t *testing.T) {
 
 	t.Run("content too large", func(t *testing.T) {
 		cfg := complypack.Config{
-		ID:          "io.test.pack",
+			ID:          "io.test.pack",
 			EvaluatorID: "io.complytime.opa",
 			Version:     "1.0.0",
 		}

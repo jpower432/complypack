@@ -94,19 +94,19 @@ complypack mcp serve --config /path/to/complypack.yaml
 
 #### MCP Resources
 
-| Resource | Description |
-|----------|-------------|
-| `complypack://catalog/<name>` | Gemara catalog (YAML) |
-| `complypack://schema/<platform>` | Platform schema (JSON) |
-| `complypack://evaluator` | Available policy evaluators |
+| Resource                         | Description                |
+|----------------------------------|----------------------------|
+| `complypack://catalog/<name>`    | Gemara catalog (YAML)      |
+| `complypack://schema/<platform>` | Platform schema (JSON)     |
+| `complypack://evaluator`         | Available policy evaluators |
 
 #### MCP Tools
 
-| Tool | Description |
-|------|-------------|
-| `validate_policy` | Validate policy syntax, contract compliance, and linting |
-| `test_policy` | Run policy against test data with schema validation |
-| `get_assessment_requirements` | Extract assessment requirements with parameters |
+| Tool                           | Description                                          |
+|--------------------------------|------------------------------------------------------|
+| `validate_policy`              | Validate policy syntax, contract compliance, and linting |
+| `test_policy`                  | Run policy against test data with schema validation  |
+| `get_assessment_requirements`  | Extract assessment requirements with parameters      |
 
 ## Architecture
 

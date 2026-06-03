@@ -69,7 +69,7 @@ func TarGzipDir(dir string) (io.Reader, error) {
 			return nil
 		}
 
-		f, err := os.Open(path) // #nosec G304 -- path is from controlled WalkDir
+		f, err := os.Open(path) //nolint:gosec // G304,G122 -- path is from controlled WalkDir of user-specified dir
 		if err != nil {
 			return fmt.Errorf("opening %s: %w", path, err)
 		}
