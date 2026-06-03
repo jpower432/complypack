@@ -142,7 +142,7 @@ schemas:
 			server, err := mcp.NewServer(ctx, opts)
 			Expect(err).To(HaveOccurred())
 			Expect(server).To(BeNil())
-			Expect(err.Error()).To(ContainSubstring("unsupported platform"))
+			Expect(err.Error()).To(ContainSubstring("failed to load schema"))
 		})
 
 		// Removed: duplicate catalog test - no longer applicable with single source config
