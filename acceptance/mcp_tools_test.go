@@ -39,7 +39,7 @@ controls:
     title: Test Control
     description: Test control description`
 
-		err := os.WriteFile(catalogPath, []byte(catalogContent), 0644)
+		err := os.WriteFile(catalogPath, []byte(catalogContent), 0600)
 		Expect(err).ToNot(HaveOccurred())
 
 		// Create config pointing to catalog
@@ -51,7 +51,7 @@ schemas:
   - path: schemas/kubernetes.cue
     platform: kubernetes`
 
-		err = os.WriteFile(configPath, []byte(configContent), 0644)
+		err = os.WriteFile(configPath, []byte(configContent), 0600)
 		Expect(err).ToNot(HaveOccurred())
 
 		// Create server

@@ -128,7 +128,8 @@ func TestHandleGetAssessmentRequirements(t *testing.T) {
 
 		textContent := result.Content[0].(*mcp.TextContent)
 		var response map[string]interface{}
-		json.Unmarshal([]byte(textContent.Text), &response)
+		err = json.Unmarshal([]byte(textContent.Text), &response)
+		require.NoError(t, err)
 
 		assert.Equal(t, "TEST-001", response["control_id"])
 	})
