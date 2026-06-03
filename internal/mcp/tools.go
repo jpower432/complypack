@@ -92,7 +92,7 @@ func createValidatePolicyTool() *mcp.Tool {
 				},
 				"evaluator": map[string]interface{}{
 					"type":        "string",
-					"description": "Evaluator ID (e.g., 'io.complytime.opa'). Omit to auto-select if only one is available. Read complypack://evaluator for the list.",
+					"description": "Evaluator ID (e.g., 'opa'). Omit to auto-select if only one is available. Read complypack://evaluator for the list.",
 				},
 			},
 			"required": []interface{}{"policyContent", "platform"},
@@ -122,7 +122,7 @@ func createTestPolicyTool() *mcp.Tool {
 				},
 				"evaluator": map[string]interface{}{
 					"type":        "string",
-					"description": "Evaluator ID (e.g., 'io.complytime.opa'). Omit to auto-select if only one is available. Read complypack://evaluator for the list.",
+					"description": "Evaluator ID (e.g., 'opa'). Omit to auto-select if only one is available. Read complypack://evaluator for the list.",
 				},
 			},
 			"required": []interface{}{"policyContent", "testData", "platform"},

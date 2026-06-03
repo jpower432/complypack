@@ -30,7 +30,7 @@ func TestNewServer(t *testing.T) {
 
 		// Create config file
 		configPath := filepath.Join(t.TempDir(), "complypack.yaml")
-		configYAML := `evaluator-id: io.complytime.opa
+		configYAML := `evaluator-id: opa
 version: 0.1.0
 gemara:
   source: ` + filepath.Join(ociStore, "controls-v1", "catalog.yaml") + `
@@ -68,7 +68,7 @@ schemas:
 		ociStore := t.TempDir()
 
 		configPath := filepath.Join(t.TempDir(), "complypack.yaml")
-		configYAML := `evaluator-id: io.complytime.opa
+		configYAML := `evaluator-id: opa
 version: 0.1.0
 gemara:
   source: /nonexistent/catalog.yaml
@@ -100,7 +100,7 @@ schemas:
 		})
 
 		configPath := filepath.Join(t.TempDir(), "complypack.yaml")
-		configYAML := `evaluator-id: io.complytime.opa
+		configYAML := `evaluator-id: opa
 version: 0.1.0
 gemara:
   source: ` + filepath.Join(ociStore, "controls-v1", "catalog.yaml") + `

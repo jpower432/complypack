@@ -52,7 +52,7 @@ controls:
 
 		// Create config file
 		configPath = filepath.Join(tempDir, "complypack.yaml")
-		configContent := `evaluator-id: io.complytime.opa
+		configContent := `evaluator-id: opa
 version: 0.1.0
 gemara:
   source: ` + catalogPath + `
@@ -98,7 +98,7 @@ schemas:
 
 		It("should fail with missing catalog file", func() {
 			badConfigPath := filepath.Join(tempDir, "bad-config.yaml")
-			badConfigContent := `evaluator-id: io.complytime.opa
+			badConfigContent := `evaluator-id: opa
 version: 0.1.0
 gemara:
   source: /nonexistent/catalog.yaml
@@ -123,7 +123,7 @@ schemas:
 		It("should skip unknown platform without failing", func() {
 			unknownConfigPath := filepath.Join(tempDir, "unknown-platform-config.yaml")
 			catalogPath := filepath.Join(catalogDir, "test-catalog.yaml")
-			unknownConfigContent := `evaluator-id: io.complytime.opa
+			unknownConfigContent := `evaluator-id: opa
 version: 0.1.0
 gemara:
   source: ` + catalogPath + `

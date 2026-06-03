@@ -43,7 +43,7 @@ controls:
 		Expect(err).ToNot(HaveOccurred())
 
 		// Create config pointing to catalog
-		configContent := `evaluator-id: io.complytime.opa
+		configContent := `evaluator-id: opa
 version: 0.1.0
 gemara:
   source: ` + catalogPath + `

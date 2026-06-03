@@ -15,7 +15,7 @@ import (
 	"github.com/complytime/complypack/internal/validator"
 )
 
-const OPAEvaluatorID = "io.complytime.opa"
+const OPAEvaluatorID = "opa"
 
 // OPA implements the Evaluator interface for Open Policy Agent policies.
 type OPA struct{}
