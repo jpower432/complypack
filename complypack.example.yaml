@@ -1,9 +1,12 @@
 # ComplyPack Configuration Example
 # This file shows all supported schema source types
 
-# Provider plugin ID that evaluates this pack's content.
+# Globally unique pack identifier (reverse-domain convention).
+# Survives registry moves and distinguishes packs from different authors.
+id: io.complytime.example
+
+# Provider plugin that evaluates this pack's content.
 # Must match the provider's registered ID (e.g., "opa" matches opa-provider).
-# Used by: complyctl (dispatch), MCP server (validator/tester), OCI artifact config.
 evaluator-id: opa
 
 # ComplyPack artifact version

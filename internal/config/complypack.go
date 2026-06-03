@@ -34,6 +34,7 @@ type GemaraConfig struct {
 // ComplyPackConfig represents the structure of complypack.yaml.
 // Aligned with CEP-0001 and complypack-pipeline specification.
 type ComplyPackConfig struct {
+	ID          string       `yaml:"id"`
 	EvaluatorID string       `yaml:"evaluator-id"`
 	Version     string       `yaml:"version"`
 	Gemara      GemaraConfig `yaml:"gemara"`
@@ -106,6 +107,10 @@ func (c *ComplyPackConfig) ValidateForMCP() error {
 func (c *ComplyPackConfig) ValidateForPack() error {
 	if err := c.Validate(); err != nil {
 		return err
+	}
+
+	if c.ID == "" {
+		return fmt.Errorf("missing required field: id")
 	}
 
 	if c.EvaluatorID == "" {

@@ -34,14 +34,15 @@ go get github.com/complytime/complypack
 Create `complypack.yaml` in your working directory:
 
 ```yaml
-# The provider plugin that evaluates this pack's content (must match the
-# provider's registered ID — e.g., "opa" matches the opa-provider plugin).
-# Used by complyctl to dispatch content to the correct provider, by the
-# MCP server to select the right validator/tester, and embedded in the
-# OCI artifact config layer so consumers know how to interpret the content.
+# Globally unique pack identifier (reverse-domain convention).
+# Survives registry moves, distinguishes packs from different authors.
+id: io.complytime.my-controls
+
+# Provider plugin that evaluates this pack's content.
+# Must match the provider's binary suffix (e.g., "opa" → complyctl-provider-opa).
 evaluator-id: opa
 
-# Version of this complypack artifact
+# ComplyPack artifact version
 version: 0.1.0
 
 # Gemara policy source (for MCP server)
@@ -142,6 +143,7 @@ The MCP server resolves Gemara policy graphs:
 
 ```go
 cfg := complypack.Config{
+    ID:          "io.example.my-policies",
     EvaluatorID: "opa",
     Version:     "1.0.0",
 }

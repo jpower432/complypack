@@ -51,6 +51,7 @@ Examples:
 
 			// Build complypack config from complypack.yaml
 			packCfg := complypack.Config{
+				ID:          cfg.ID,
 				EvaluatorID: cfg.EvaluatorID,
 				Version:     cfg.Version,
 			}
