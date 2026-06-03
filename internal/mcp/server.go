@@ -230,7 +230,8 @@ func loadJSONSchemaFromSource(ctx context.Context, source SchemaSource, platform
 	case SourceTypeFile, SourceTypeLegacyPath:
 		data, format, err = loadSchemaFromFile(source.Path)
 	case SourceTypeCUEModule:
-		return nil, fmt.Errorf("CUE modules not supported for JSON schemas (use file:// with .cue extension)")
+		// Load CUE schema and convert to JSON Schema
+		return loadJSONSchemaFromCUE(ctx, source, platform)
 	case SourceTypeUnknown:
 		return nil, fmt.Errorf("no source specified")
 	default:
@@ -247,6 +248,25 @@ func loadJSONSchemaFromSource(ctx context.Context, source SchemaSource, platform
 
 	slog.Info("loaded schema from source", "platform", platform, "source", source.Path)
 	return data, nil
+}
+
+// loadJSONSchemaFromCUE loads a CUE schema and converts it to JSON Schema.
+func loadJSONSchemaFromCUE(ctx context.Context, source SchemaSource, platform string) ([]byte, error) {
+	// Load the CUE schema using the existing loader
+	cueVal, err := loadCUEFromSource(ctx, source, platform)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load CUE schema: %w", err)
+	}
+
+	// Convert CUE value to JSON Schema
+	// CUE's approach: export the value as JSON which represents the schema structure
+	jsonBytes, err := cueVal.MarshalJSON()
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert CUE to JSON: %w", err)
+	}
+
+	slog.Info("loaded and converted CUE schema to JSON", "platform", platform, "source", source.Path)
+	return jsonBytes, nil
 }
 
 // LoadedArtifacts holds raw and parsed artifacts from bundle/file loading.

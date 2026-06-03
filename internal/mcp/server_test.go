@@ -88,7 +88,7 @@ schemas:
 
 		assert.Error(t, err)
 		assert.Nil(t, srv)
-		assert.Contains(t, err.Error(), "failed to read catalog")
+		assert.Contains(t, err.Error(), "failed to load artifacts")
 	})
 
 	t.Run("error when platform unsupported", func(t *testing.T) {
@@ -222,8 +222,8 @@ func createMockCatalogBundle(t *testing.T, baseDir, bundleName string, files map
 // mockControlsCatalog is a minimal valid Gemara control catalog for testing.
 const mockControlsCatalog = `metadata:
   id: controls-v1
-  version: 1.0.0
-  gemara-version: 0.20.0
+  type: ControlCatalog
+  gemara-version: "1.0.0"
 controls:
   - id: AC-1
     title: Access Control Policy
