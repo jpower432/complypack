@@ -7,20 +7,34 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gemaraproj/go-gemara"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // ResourceStore manages catalogs and schemas for MCP resource handlers.
+// It holds both raw YAML (for MCP resource serving) and parsed artifacts (for tool handlers).
 type ResourceStore struct {
-	catalogs map[string][]byte
-	schemas  map[string][]byte
+	rawCatalogs map[string][]byte                      // raw YAML for ReadResource
+	catalogs    map[string]*gemara.ControlCatalog      // parsed ControlCatalogs
+	policies    map[string]*gemara.Policy              // parsed Policies
+	effective   map[string]*gemara.EffectivePolicy     // resolved policy graphs
+	schemas     map[string][]byte                      // platform JSON schemas
 }
 
-// NewResourceStore creates a ResourceStore with the given catalogs and schemas.
-func NewResourceStore(catalogs, schemas map[string][]byte) *ResourceStore {
+// NewResourceStore creates a ResourceStore with raw and parsed artifacts.
+func NewResourceStore(
+	rawCatalogs map[string][]byte,
+	catalogs map[string]*gemara.ControlCatalog,
+	policies map[string]*gemara.Policy,
+	effective map[string]*gemara.EffectivePolicy,
+	schemas map[string][]byte,
+) *ResourceStore {
 	return &ResourceStore{
-		catalogs: catalogs,
-		schemas:  schemas,
+		rawCatalogs: rawCatalogs,
+		catalogs:    catalogs,
+		policies:    policies,
+		effective:   effective,
+		schemas:     schemas,
 	}
 }
 
@@ -28,8 +42,8 @@ func NewResourceStore(catalogs, schemas map[string][]byte) *ResourceStore {
 func (rs *ResourceStore) ListResources(ctx context.Context) ([]mcp.Resource, error) {
 	var resources []mcp.Resource
 
-	// Add catalog resources
-	for name := range rs.catalogs {
+	// Add catalog resources (from raw catalogs for ReadResource)
+	for name := range rs.rawCatalogs {
 		resources = append(resources, mcp.Resource{
 			URI:      fmt.Sprintf("%s://%s/%s", URIScheme, ResourceTypeCatalog, name),
 			Name:     fmt.Sprintf("Gemara Catalog: %s", name),
@@ -67,7 +81,7 @@ func (rs *ResourceStore) ReadResource(ctx context.Context, uri string) ([]*mcp.R
 
 	switch resourceType {
 	case ResourceTypeCatalog:
-		data, ok := rs.catalogs[name]
+		data, ok := rs.rawCatalogs[name]
 		if !ok {
 			return nil, fmt.Errorf("catalog %q not found", name)
 		}
