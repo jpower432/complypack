@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/complytime/complypack/internal/config"
 	"github.com/complytime/complypack/schemas"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,7 +53,7 @@ schemas:
 		require.NotNil(t, srv)
 
 		// Verify resource store has catalog
-		store := srv.resourceStore
+		store := srv.ResourceStore
 		require.NotNil(t, store)
 		assert.Len(t, store.catalogs, 1)
 		assert.Contains(t, store.catalogs, "controls-v1")
@@ -119,7 +120,7 @@ schemas:
 
 		assert.Error(t, err)
 		assert.Nil(t, srv)
-		assert.Contains(t, err.Error(), "unsupported platform")
+		assert.Contains(t, err.Error(), "failed to load schema")
 	})
 
 	// Removed: duplicate catalog test - no longer applicable with single source config
@@ -169,8 +170,16 @@ func TestExtractCatalogName(t *testing.T) {
 }
 
 func TestLoadSchemas(t *testing.T) {
+	ctx := context.Background()
+
+	// Create schema refs for all built-in platforms (no source = use embedded)
+	var refs []config.SchemaRef
+	for _, platform := range schemas.BuiltInPlatforms {
+		refs = append(refs, config.SchemaRef{Platform: platform})
+	}
+
 	t.Run("loads all built-in schemas", func(t *testing.T) {
-		schemaMap, err := loadSchemas()
+		schemaMap, err := loadSchemas(ctx, refs)
 		require.NoError(t, err)
 		require.NotNil(t, schemaMap)
 
@@ -182,7 +191,7 @@ func TestLoadSchemas(t *testing.T) {
 	})
 
 	t.Run("schema content is valid JSON", func(t *testing.T) {
-		schemaMap, err := loadSchemas()
+		schemaMap, err := loadSchemas(ctx, refs)
 		require.NoError(t, err)
 
 		for platform, data := range schemaMap {
