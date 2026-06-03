@@ -73,9 +73,9 @@ func handleGetAssessmentRequirements(store *ResourceStore) mcp.ToolHandler {
 
 		// Build response
 		responseData, err := json.Marshal(map[string]interface{}{
-			"catalog":    input.CatalogName,
-			"control_id": input.ControlID,
-			"count":      len(requirements),
+			"catalog":      input.CatalogName,
+			"control_id":   input.ControlID,
+			"count":        len(requirements),
 			"requirements": requirements,
 		})
 		if err != nil {

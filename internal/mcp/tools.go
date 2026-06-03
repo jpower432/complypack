@@ -159,10 +159,10 @@ func buildValidationResponse(valid bool, syntaxErrs []error, violations []evalua
 
 	// Build response
 	response := map[string]interface{}{
-		"valid":               valid,
-		"syntaxErrors":        syntaxErrStrs,
-		"contractViolations":  contractViolationMaps,
-		"lintWarnings":        lintWarningMaps,
+		"valid":              valid,
+		"syntaxErrors":       syntaxErrStrs,
+		"contractViolations": contractViolationMaps,
+		"lintWarnings":       lintWarningMaps,
 	}
 
 	responseJSON, err := json.Marshal(response)
@@ -204,8 +204,8 @@ func buildTestDataErrorResponse(errors []string) (*mcp.CallToolResult, error) {
 // buildTestResultsResponse constructs the test_policy response.
 func buildTestResultsResponse(results *evaluator.TestResults) (*mcp.CallToolResult, error) {
 	response := map[string]interface{}{
-		"testDataValid":  true,
-		"testsExecuted":  true,
+		"testDataValid": true,
+		"testsExecuted": true,
 		"results": map[string]interface{}{
 			"total":  results.Total,
 			"passed": results.Passed,

@@ -16,12 +16,12 @@ import (
 // ResourceStore manages catalogs and schemas for MCP resource handlers.
 // It holds both raw YAML (for MCP resource serving) and parsed artifacts (for tool handlers).
 type ResourceStore struct {
-	rawCatalogs map[string][]byte                      // raw YAML for ReadResource
-	catalogs    map[string]*gemara.ControlCatalog      // parsed ControlCatalogs
-	policies    map[string]*gemara.Policy              // parsed Policies
-	effective   map[string]*gemara.EffectivePolicy     // resolved policy graphs
-	schemas     map[string][]byte                      // platform JSON schemas
-	evaluators  *evaluator.Registry                    // available policy evaluators
+	rawCatalogs map[string][]byte                  // raw YAML for ReadResource
+	catalogs    map[string]*gemara.ControlCatalog  // parsed ControlCatalogs
+	policies    map[string]*gemara.Policy          // parsed Policies
+	effective   map[string]*gemara.EffectivePolicy // resolved policy graphs
+	schemas     map[string][]byte                  // platform JSON schemas
+	evaluators  *evaluator.Registry                // available policy evaluators
 }
 
 // NewResourceStore creates a ResourceStore with raw and parsed artifacts.
