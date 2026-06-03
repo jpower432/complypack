@@ -73,13 +73,33 @@ complypack mcp serve
 1. Create `complypack.yaml` in your working directory:
 
 ```yaml
-platform: kubernetes
-gemara-catalogs:
-  - oci://ghcr.io/complytime/controls-catalog:v1
-  - oci://ghcr.io/complytime/security-controls:v2
-platform-schemas:
-  custom-platform: ./schemas/custom.cue  # Optional
+evaluator-id: io.complytime.opa
+version: 0.1.0
+
+# Gemara catalog source (file path or OCI reference)
+gemara:
+  source: ghcr.io/complytime/controls-catalog:v1
+  # OR: source: file://./catalogs/my-controls.yaml
+
+# Platform schemas with flexible source types
+schemas:
+  # CUE registry module (fetches from cue.dev)
+  - platform: kubernetes
+    source: cue://cue.dev/x/k8s.io/api/core/v1
+
+  # HTTPS download
+  - platform: terraform
+    source: https://example.com/schemas/terraform.json
+
+  # Local file
+  - platform: docker
+    source: file://./schemas/docker.cue
+
+  # Embedded fallback (no source specified)
+  - platform: ansible
 ```
+
+See `complypack.example.yaml` for full configuration options.
 
 2. Authenticate to OCI registries if needed:
 
