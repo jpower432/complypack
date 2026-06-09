@@ -130,6 +130,9 @@ func guidancePoolIndex(guidance map[string]*gemara.GuidanceCatalog) map[string]g
 
 func resolveControlCatalog(primary gemara.ControlCatalog, pool map[string]gemara.ControlCatalog) (gemara.ControlCatalog, []string) {
 	controls, unresolved := flattenControlExtends(primary, pool)
+	imported, unresolvedImports := resolveControlImports(primary.Imports, pool)
+	controls = append(controls, imported...)
+	unresolved = append(unresolved, unresolvedImports...)
 
 	return gemara.ControlCatalog{
 		Title:    primary.Title,
@@ -180,6 +183,9 @@ func walkControlExtends(extends []gemara.ArtifactMapping, pool map[string]gemara
 
 func resolveGuidanceCatalog(primary gemara.GuidanceCatalog, pool map[string]gemara.GuidanceCatalog) (gemara.GuidanceCatalog, []string) {
 	guidelines, unresolved := flattenGuidanceExtends(primary, pool)
+	imported, unresolvedImports := resolveGuidanceImports(primary.Imports, pool)
+	guidelines = append(guidelines, imported...)
+	unresolved = append(unresolved, unresolvedImports...)
 
 	return gemara.GuidanceCatalog{
 		Title:        primary.Title,
@@ -229,6 +235,71 @@ func walkGuidanceExtends(extends []gemara.ArtifactMapping, pool map[string]gemar
 		}
 	}
 	return result, unresolved
+}
+
+// resolveControlImports selectively includes controls from imported catalogs.
+// Each MultiEntryMapping references a source catalog; its Entries list which
+// controls to pull in. An empty Entries list includes all controls.
+func resolveControlImports(imports []gemara.MultiEntryMapping, pool map[string]gemara.ControlCatalog) ([]gemara.Control, []string) {
+	var result []gemara.Control
+	var unresolved []string
+	for _, imp := range imports {
+		if imp.ReferenceId == "" {
+			continue
+		}
+		cat, ok := pool[imp.ReferenceId]
+		if !ok {
+			unresolved = append(unresolved, imp.ReferenceId)
+			continue
+		}
+		if len(imp.Entries) == 0 {
+			result = append(result, deepCopyControls(cat.Controls)...)
+			continue
+		}
+		wanted := toSet(entriesToIDs(imp.Entries))
+		for _, ctrl := range cat.Controls {
+			if wanted[ctrl.Id] {
+				result = append(result, deepCopyControls([]gemara.Control{ctrl})...)
+			}
+		}
+	}
+	return result, unresolved
+}
+
+func resolveGuidanceImports(imports []gemara.MultiEntryMapping, pool map[string]gemara.GuidanceCatalog) ([]gemara.Guideline, []string) {
+	var result []gemara.Guideline
+	var unresolved []string
+	for _, imp := range imports {
+		if imp.ReferenceId == "" {
+			continue
+		}
+		gc, ok := pool[imp.ReferenceId]
+		if !ok {
+			unresolved = append(unresolved, imp.ReferenceId)
+			continue
+		}
+		if len(imp.Entries) == 0 {
+			result = append(result, deepCopyGuidelines(gc.Guidelines)...)
+			continue
+		}
+		wanted := toSet(entriesToIDs(imp.Entries))
+		for _, gl := range gc.Guidelines {
+			if wanted[gl.Id] {
+				result = append(result, deepCopyGuidelines([]gemara.Guideline{gl})...)
+			}
+		}
+	}
+	return result, unresolved
+}
+
+func entriesToIDs(entries []gemara.ArtifactMapping) []string {
+	ids := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if e.ReferenceId != "" {
+			ids = append(ids, e.ReferenceId)
+		}
+	}
+	return ids
 }
 
 func applyCatalogOverlays(catalog gemara.ControlCatalog, imp gemara.CatalogImport) *gemara.ControlCatalog {

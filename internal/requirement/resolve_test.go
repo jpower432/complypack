@@ -177,3 +177,135 @@ func TestResolvePolicy_WithExtends(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, rp.ControlCatalogs[0].Controls, 2)
 }
+
+func TestResolvePolicy_WithCatalogImports(t *testing.T) {
+	shared := &gemara.ControlCatalog{
+		Metadata: gemara.Metadata{Id: "shared-controls"},
+		Controls: []gemara.Control{
+			{Id: "SHARED-001", Title: "Shared Control 1"},
+			{Id: "SHARED-002", Title: "Shared Control 2"},
+			{Id: "SHARED-003", Title: "Shared Control 3"},
+		},
+	}
+
+	t.Run("selective import includes only specified entries", func(t *testing.T) {
+		importing := &gemara.ControlCatalog{
+			Metadata: gemara.Metadata{Id: "importing-catalog"},
+			Imports: []gemara.MultiEntryMapping{
+				{
+					ReferenceId: "shared-controls",
+					Entries: []gemara.ArtifactMapping{
+						{ReferenceId: "SHARED-001"},
+						{ReferenceId: "SHARED-003"},
+					},
+				},
+			},
+			Controls: []gemara.Control{
+				{Id: "LOCAL-001", Title: "Local Control"},
+			},
+		}
+
+		policy := &gemara.Policy{
+			Metadata: gemara.Metadata{
+				Id:                "test-policy",
+				MappingReferences: []gemara.MappingReference{{Id: "importing-catalog"}},
+			},
+			Imports: gemara.Imports{
+				Catalogs: []gemara.CatalogImport{{ReferenceId: "importing-catalog"}},
+			},
+		}
+
+		set := &ArtifactSet{
+			Catalogs: map[string]*gemara.ControlCatalog{
+				"shared-controls":   shared,
+				"importing-catalog": importing,
+			},
+			Policies: map[string]*gemara.Policy{"test-policy": policy},
+			Guidance: make(map[string]*gemara.GuidanceCatalog),
+		}
+
+		rp, err := ResolvePolicy(*policy, set)
+		require.NoError(t, err)
+
+		controls := rp.ControlCatalogs[0].Controls
+		assert.Len(t, controls, 3) // LOCAL-001 + SHARED-001 + SHARED-003
+		ids := make([]string, len(controls))
+		for i, c := range controls {
+			ids[i] = c.Id
+		}
+		assert.Contains(t, ids, "LOCAL-001")
+		assert.Contains(t, ids, "SHARED-001")
+		assert.Contains(t, ids, "SHARED-003")
+		assert.NotContains(t, ids, "SHARED-002")
+	})
+
+	t.Run("empty entries imports all controls", func(t *testing.T) {
+		importing := &gemara.ControlCatalog{
+			Metadata: gemara.Metadata{Id: "importing-catalog"},
+			Imports: []gemara.MultiEntryMapping{
+				{ReferenceId: "shared-controls"},
+			},
+			Controls: []gemara.Control{
+				{Id: "LOCAL-001", Title: "Local Control"},
+			},
+		}
+
+		policy := &gemara.Policy{
+			Metadata: gemara.Metadata{
+				Id:                "test-policy",
+				MappingReferences: []gemara.MappingReference{{Id: "importing-catalog"}},
+			},
+			Imports: gemara.Imports{
+				Catalogs: []gemara.CatalogImport{{ReferenceId: "importing-catalog"}},
+			},
+		}
+
+		set := &ArtifactSet{
+			Catalogs: map[string]*gemara.ControlCatalog{
+				"shared-controls":   shared,
+				"importing-catalog": importing,
+			},
+			Policies: map[string]*gemara.Policy{"test-policy": policy},
+			Guidance: make(map[string]*gemara.GuidanceCatalog),
+		}
+
+		rp, err := ResolvePolicy(*policy, set)
+		require.NoError(t, err)
+		assert.Len(t, rp.ControlCatalogs[0].Controls, 4) // LOCAL-001 + all 3 shared
+	})
+
+	t.Run("missing import source tracked as unresolved", func(t *testing.T) {
+		importing := &gemara.ControlCatalog{
+			Metadata: gemara.Metadata{Id: "importing-catalog"},
+			Imports: []gemara.MultiEntryMapping{
+				{ReferenceId: "nonexistent"},
+			},
+			Controls: []gemara.Control{
+				{Id: "LOCAL-001", Title: "Local Control"},
+			},
+		}
+
+		policy := &gemara.Policy{
+			Metadata: gemara.Metadata{
+				Id:                "test-policy",
+				MappingReferences: []gemara.MappingReference{{Id: "importing-catalog"}},
+			},
+			Imports: gemara.Imports{
+				Catalogs: []gemara.CatalogImport{{ReferenceId: "importing-catalog"}},
+			},
+		}
+
+		set := &ArtifactSet{
+			Catalogs: map[string]*gemara.ControlCatalog{
+				"importing-catalog": importing,
+			},
+			Policies: map[string]*gemara.Policy{"test-policy": policy},
+			Guidance: make(map[string]*gemara.GuidanceCatalog),
+		}
+
+		rp, err := ResolvePolicy(*policy, set)
+		require.NoError(t, err)
+		assert.Contains(t, rp.Unresolved, "nonexistent")
+		assert.Len(t, rp.ControlCatalogs[0].Controls, 1)
+	})
+}
