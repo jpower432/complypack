@@ -1,10 +1,10 @@
 {
   "name": "complypack",
   "displayName": "ComplyPack",
-  "version": "2.0.0",
+  "version": "0.1.0",
   "description": "Generate Rego policies from Gemara catalogs and extract assessment requirements via MCP server",
   "author": {
-    "name": "Jennifer Power",
+    "name": "ComplyTime Authors",
     "url": "https://github.com/complytime"
   },
   "repository": "https://github.com/complytime/complypack",
