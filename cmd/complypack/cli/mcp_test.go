@@ -156,6 +156,19 @@ func TestBuildConfigFromFlags(t *testing.T) {
 			},
 		},
 		{
+			name:    "schema only without sources",
+			sources: nil,
+			schemas: []string{"kubernetes"},
+			want: &config.ComplyPackConfig{
+				Gemara: config.GemaraConfig{
+					Sources: nil,
+				},
+				Schemas: []config.SchemaRef{
+					{Platform: "kubernetes"},
+				},
+			},
+		},
+		{
 			name:    "invalid source",
 			sources: []string{""},
 			schemas: []string{"kubernetes"},

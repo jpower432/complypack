@@ -74,8 +74,8 @@ The server runs until interrupted (Ctrl+C) or the client disconnects.`,
 				CacheDir: resolvedCacheDir,
 			}
 
-			// If --source flags are present, build config from flags
-			if len(sources) > 0 {
+			// If any CLI flags are present, build config from flags
+			if len(sources) > 0 || len(schemas) > 0 {
 				cfg, err := buildConfigFromFlags(sources, schemas)
 				if err != nil {
 					return fmt.Errorf("failed to build config from flags: %w", err)
