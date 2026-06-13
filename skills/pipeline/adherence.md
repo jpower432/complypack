@@ -47,7 +47,7 @@ Group by `requirement_id`. Each plan:
 ### Step 5: Compile the Policy
 
 ```yaml
-gemara: v1alpha1
+gemara: v1.0.0
 kind: Policy
 metadata:
   id: <system-name>-policy
