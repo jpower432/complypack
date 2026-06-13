@@ -28,6 +28,13 @@ func createGetAssessmentRequirementsTool() *mcp.Tool {
 					"type":        "string",
 					"description": "Optional: Specific control ID to filter requirements (e.g., 'CTRL-001')",
 				},
+				"scope": map[string]interface{}{
+					"type": "array",
+					"items": map[string]interface{}{
+						"type": "string",
+					},
+					"description": "Optional: Filter requirements by applicability groups (e.g., ['maturity-1', 'maturity-2']). Returns requirements whose applicability contains any of the given values.",
+				},
 			},
 			"required": []interface{}{"catalogName"},
 		},
@@ -48,8 +55,9 @@ func handleGetAssessmentRequirements(store *ResourceStore) mcp.ToolHandler {
 	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// Parse input
 		var input struct {
-			CatalogName string `json:"catalogName"`
-			ControlID   string `json:"controlId"`
+			CatalogName string   `json:"catalogName"`
+			ControlID   string   `json:"controlId"`
+			Scope       []string `json:"scope"`
 		}
 
 		if err := json.Unmarshal(req.Params.Arguments, &input); err != nil {
@@ -60,12 +68,13 @@ func handleGetAssessmentRequirements(store *ResourceStore) mcp.ToolHandler {
 		if !found {
 			return nil, fmt.Errorf("policy %q not found", input.CatalogName)
 		}
-		requirements := extractFromResolvedPolicy(rp, input.ControlID)
+		requirements := extractFromResolvedPolicy(rp, input.ControlID, input.Scope)
 
 		// Build response
 		responseData, err := json.Marshal(map[string]interface{}{
 			"catalog":      input.CatalogName,
 			"control_id":   input.ControlID,
+			"scope":        input.Scope,
 			"count":        len(requirements),
 			"requirements": requirements,
 		})
@@ -84,7 +93,7 @@ func handleGetAssessmentRequirements(store *ResourceStore) mcp.ToolHandler {
 }
 
 // extractFromResolvedPolicy extracts requirements from a resolved policy graph.
-func extractFromResolvedPolicy(rp *requirement.ResolvedPolicy, filterControlID string) []AssessmentRequirementInfo {
+func extractFromResolvedPolicy(rp *requirement.ResolvedPolicy, filterControlID string, filterScope []string) []AssessmentRequirementInfo {
 	var results []AssessmentRequirementInfo
 
 	controlIDs := rp.ControlIDs()
@@ -94,6 +103,9 @@ func extractFromResolvedPolicy(rp *requirement.ResolvedPolicy, filterControlID s
 
 	for _, controlID := range controlIDs {
 		for _, req := range rp.RequirementsForControl(controlID) {
+			if len(filterScope) > 0 && !applicabilityIntersects(req.Applicability, filterScope) {
+				continue
+			}
 			info := AssessmentRequirementInfo{
 				ID:            req.Id,
 				ControlID:     controlID,
@@ -118,6 +130,17 @@ func extractFromResolvedPolicy(rp *requirement.ResolvedPolicy, filterControlID s
 	}
 
 	return results
+}
+
+func applicabilityIntersects(applicability, scope []string) bool {
+	for _, a := range applicability {
+		for _, s := range scope {
+			if a == s {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // GetAssessmentRequirementsHandler returns the handler (for testing).
