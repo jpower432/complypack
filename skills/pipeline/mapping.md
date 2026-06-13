@@ -6,7 +6,7 @@ user-invocable: false
 
 # Mapping — Delta Analysis & Parameter Harmonization
 
-Compare parameters across Guidance Catalogs, the parent Policy, and Control Catalogs. Surface where the organization's values match or differ from each framework. When values differ, interpret which is stricter based on domain context.
+Compare parameters across Guidance Catalogs, the parent Policy, and Control Catalogs. Surface where the organization's values match or differ from each framework. Interpret the relationship using domain context — the tool gathers, the model judges.
 
 **Core invariant:** The parent Policy always sets the floor. Never resolve below it without explicit user acknowledgement.
 
@@ -23,15 +23,6 @@ The parent Policy's `imports.guidance` determines which frameworks are binding:
 - **Mandated:** Guidance Catalogs imported by the parent Policy. Shortfalls MUST be addressed.
 - **Under evaluation:** Guidance Catalogs loaded in MCP but NOT imported. Informational only.
 
-### Verdict Types
-
-| Verdict | Meaning | Action |
-|---------|---------|--------|
-| `aligned` | Values match | No action |
-| `mismatch` | Values differ | Interpret which is stricter based on domain context (e.g., TLS 1.3 > 1.2, shorter timeout = stricter). Present both values and your assessment to the user for confirmation. |
-| `org_binds_generic` | Org provides concrete value for generic language | Document |
-| `not_covered` | Parameter in one source only | Flag |
-
 ## Process
 
 ### Step 1: Read Scoping Artifacts
@@ -44,7 +35,7 @@ Read `.complytime/scoping.yaml`.
 ListMcpResourcesTool(server="complypack")
 ```
 
-If a Policy exists, read it. **If no parent Policy exists:** extract minimums from the target framework's Control Catalog requirements. The framework becomes the floor.
+Look for resources with "Policy" in the name. If a Policy exists, read it. **If no parent Policy exists:** extract minimums from the target framework's Control Catalog requirements. The framework becomes the floor.
 
 ### Step 3: Classify Guidance Frameworks
 
@@ -60,21 +51,35 @@ ReadMcpResourceTool(server="complypack", uri="complypack://mapping/<id>")
 
 Use them to resolve framework crosswalks.
 
-### Step 5: Run Delta Analysis
+### Step 5: Gather Parameter Comparisons
 
 ```
-CallMcpToolTool(server="complypack", tool="analyze_parameter_delta", arguments={"policyName": "<name>"})
+CallMcpToolTool(server="complypack", tool="analyze_parameter_delta", arguments={"policyName": "<policy-name>"})
 ```
+
+This returns structured L3 parameter values from the Policy alongside the L1/L2 requirement text they map to. Each comparison contains:
+- `requirement_id` — which requirement the parameter maps to
+- `label` — the parameter name
+- `policy_value` — the structured value from the Policy
+- `requirement_text` — the prose from the catalog
+
+**The tool does not judge the relationship.** You interpret each pair using domain context.
 
 ### Step 6: Present Results
 
-**Mandated:** Show each non-aligned verdict with values and recommended action.
+For each comparison, interpret the relationship:
+- Do the values align?
+- Does the requirement text express a concrete expectation the policy value satisfies?
+- Does the policy set a stricter threshold than the requirement implies?
+- Is the requirement generic ("per organizational requirements") and the policy provides a concrete binding?
 
-**Under evaluation:** Same verdicts, framed as "if you pursue this certification..."
+**Mandated frameworks:** present your interpretation and recommended action.
+
+**Under evaluation:** same analysis, framed as "if you pursue this certification..."
 
 ### Step 7: Resolve Decisions
 
-Walk the user through `mismatch` items. For each, interpret which value is stricter given the parameter's domain, present your assessment, and let the user decide.
+Walk the user through items where values differ. For each, present both the policy value and the requirement text, explain your interpretation, and let the user decide.
 
 ### Step 8: Write Output
 
@@ -94,44 +99,30 @@ sources:
         status: loaded_not_imported
   catalogs: [<ids>]
 
-parameters:
-  - id: "<label>"
-    requirement_id: "<req-id>"
-    layers:
-      framework:
-        source: "<id>"
-        value: "<value>"
-        specificity: <concrete|generic|none>
-      org_policy:
-        source: "<id>"
-        value: "<value>"
-        specificity: <concrete|generic|none>
-      tech_baseline:
-        source: "<id>"
-        value: "<value>"
-        specificity: <concrete|generic|none>
-    verdict: <verdict>
-    resolved_value: "<value>"
-    resolution: <resolution>
-    rationale: "<why>"
-
-summary:
-  total: <N>
-  aligned: <N>
-  mismatch: <N>
-  org_binds_generic: <N>
-  not_covered: <N>
+comparisons:
+  - requirement_id: "<req-id>"
+    label: "<label>"
+    policy_value: "<value>"
+    policy_source: "<policy-id>"
+    requirement_text: "<text>"
+    catalog_source: "<catalog-id>"
+    interpretation: "<your assessment>"
+    resolution: "<user decision>"
 ```
 
 ## MCP Resources and Tools
 
 - `complypack://catalog/*` — Control Catalogs, Guidance Catalogs, Policies
 - `complypack://mapping/*` — Mapping Documents
-- `analyze_parameter_delta` — deterministic parameter crosswalk
+- `analyze_parameter_delta` — gather L3 parameter values alongside L1/L2 requirement text
+- `get_assessment_requirements` — get requirement details, supports scope filtering
+
+**DO NOT parse local YAML files to extract control data.** All control IDs, requirement IDs, requirement text, and parameter values MUST come from MCP resources or tools.
 
 ## Red Flags
 
 - [ ] Did you classify guidance as mandated vs. under evaluation?
-- [ ] Did the user decide every `mismatch`?
+- [ ] Did the user decide every item where values differ?
 - [ ] Did you ensure no resolution goes below the parent Policy floor?
 - [ ] Did every value come from MCP?
+- [ ] Did you use `analyze_parameter_delta` to gather comparisons, not parse files?
