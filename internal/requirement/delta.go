@@ -4,124 +4,33 @@ package requirement
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/gemaraproj/go-gemara"
 )
 
-// Verdict classifies the relationship between parameter values from
-// different sources in a resolved policy graph.
-type Verdict string
-
-const (
-	VerdictAligned         Verdict = "aligned"
-	VerdictMismatch        Verdict = "mismatch"
-	VerdictOrgBindsGeneric Verdict = "org_binds_generic"
-	VerdictNotCovered      Verdict = "not_covered"
-)
-
-// Specificity describes how concrete a parameter value is.
-type Specificity string
-
-const (
-	SpecificityConcrete Specificity = "concrete"
-	SpecificityGeneric  Specificity = "generic"
-	SpecificityNone     Specificity = "none"
-)
-
-// ParameterLayer holds a parameter value from one source.
-type ParameterLayer struct {
-	Source      string      `json:"source"`
-	Value       string      `json:"value"`
-	Specificity Specificity `json:"specificity"`
+// ParameterComparison pairs a structured L3 parameter with the
+// L1/L2 requirement text it maps to. The caller interprets the
+// relationship — the engine does not judge.
+type ParameterComparison struct {
+	RequirementID   string `json:"requirement_id"`
+	Label           string `json:"label"`
+	PolicyValue     string `json:"policy_value"`
+	PolicySource    string `json:"policy_source"`
+	RequirementText string `json:"requirement_text"`
+	CatalogSource   string `json:"catalog_source"`
 }
 
-// ParameterDelta is the result of comparing a single parameter
-// across framework, org policy, and tech baseline layers.
-type ParameterDelta struct {
-	RequirementID string         `json:"requirement_id"`
-	Label         string         `json:"label"`
-	Framework     ParameterLayer `json:"framework"`
-	OrgPolicy     ParameterLayer `json:"org_policy"`
-	TechBaseline  ParameterLayer `json:"tech_baseline"`
-	Verdict       Verdict        `json:"verdict"`
-}
-
-// DeltaReport is the full result of analyzing parameter deltas
+// DeltaReport is the result of gathering parameter comparisons
 // across a resolved policy.
 type DeltaReport struct {
-	PolicyID         string           `json:"policy"`
-	CatalogsCompared []string         `json:"catalogs_compared"`
-	Parameters       []ParameterDelta `json:"parameters"`
-	Summary          DeltaSummary     `json:"summary"`
+	PolicyID         string                `json:"policy"`
+	CatalogsCompared []string              `json:"catalogs_compared"`
+	Comparisons      []ParameterComparison `json:"comparisons"`
 }
 
-// DeltaSummary counts verdicts.
-type DeltaSummary struct {
-	Total           int `json:"total"`
-	Aligned         int `json:"aligned"`
-	Mismatch        int `json:"mismatch"`
-	OrgBindsGeneric int `json:"org_binds_generic"`
-	NotCovered      int `json:"not_covered"`
-}
-
-// CompareValues determines the verdict between a framework layer and
-// an org policy layer.
-func CompareValues(framework, orgPolicy ParameterLayer) Verdict {
-	if framework.Specificity == SpecificityNone {
-		return VerdictNotCovered
-	}
-	if orgPolicy.Specificity == SpecificityNone {
-		return VerdictNotCovered
-	}
-
-	if framework.Specificity == SpecificityGeneric && orgPolicy.Specificity == SpecificityConcrete {
-		return VerdictOrgBindsGeneric
-	}
-
-	if framework.Value == orgPolicy.Value {
-		return VerdictAligned
-	}
-
-	return VerdictMismatch
-}
-
-func classifySpecificity(value string) Specificity {
-	if value == "" {
-		return SpecificityNone
-	}
-	lower := strings.ToLower(value)
-	if strings.Contains(lower, "per organizational") ||
-		strings.Contains(lower, "per the organization") ||
-		strings.Contains(lower, "as defined by") ||
-		strings.Contains(lower, "according to") {
-		return SpecificityGeneric
-	}
-	return SpecificityConcrete
-}
-
-func findGuidelineParameter(gc gemara.GuidanceCatalog, label string) (string, bool) {
-	return "", false
-}
-
-func summarizeDeltas(deltas []ParameterDelta) DeltaSummary {
-	s := DeltaSummary{Total: len(deltas)}
-	for _, d := range deltas {
-		switch d.Verdict {
-		case VerdictAligned:
-			s.Aligned++
-		case VerdictMismatch:
-			s.Mismatch++
-		case VerdictOrgBindsGeneric:
-			s.OrgBindsGeneric++
-		case VerdictNotCovered:
-			s.NotCovered++
-		}
-	}
-	return s
-}
-
-// AnalyzeDelta compares parameters across all layers in a resolved policy.
+// AnalyzeDelta gathers L3 parameter values alongside the L1/L2
+// requirement text they map to. Returns structured pairs for the
+// caller to interpret — no verdicts or heuristics.
 func AnalyzeDelta(rp *ResolvedPolicy, set *ArtifactSet) (*DeltaReport, error) {
 	if rp == nil {
 		return nil, fmt.Errorf("resolved policy is nil")
@@ -132,53 +41,68 @@ func AnalyzeDelta(rp *ResolvedPolicy, set *ArtifactSet) (*DeltaReport, error) {
 		catalogIDs = append(catalogIDs, cat.Metadata.Id)
 	}
 
-	var deltas []ParameterDelta
+	reqTextIndex := buildRequirementTextIndex(rp)
+
+	var comparisons []ParameterComparison
 	for _, plan := range rp.Policy.Adherence.AssessmentPlans {
 		for _, param := range plan.Parameters {
-			orgValue := ""
+			policyValue := ""
 			if len(param.AcceptedValues) > 0 {
-				orgValue = param.AcceptedValues[0]
+				policyValue = param.AcceptedValues[0]
 			}
 
-			orgLayer := ParameterLayer{
-				Source:      rp.Policy.Metadata.Id,
-				Value:       orgValue,
-				Specificity: classifySpecificity(orgValue),
-			}
+			reqText, catalogSource := reqTextIndex.lookup(plan.RequirementId)
 
-			fwLayer := ParameterLayer{Specificity: SpecificityNone}
-			baselineLayer := ParameterLayer{Specificity: SpecificityNone}
-
-			for _, gc := range rp.GuidanceCatalogs {
-				if v, ok := findGuidelineParameter(gc, param.Label); ok {
-					fwLayer = ParameterLayer{
-						Source:      gc.Metadata.Id,
-						Value:       v,
-						Specificity: classifySpecificity(v),
-					}
-					break
-				}
-			}
-
-			verdict := CompareValues(fwLayer, orgLayer)
-
-			deltas = append(deltas, ParameterDelta{
-				RequirementID: plan.RequirementId,
-				Label:         param.Label,
-				Framework:     fwLayer,
-				OrgPolicy:     orgLayer,
-				TechBaseline:  baselineLayer,
-				Verdict:       verdict,
+			comparisons = append(comparisons, ParameterComparison{
+				RequirementID:   plan.RequirementId,
+				Label:           param.Label,
+				PolicyValue:     policyValue,
+				PolicySource:    rp.Policy.Metadata.Id,
+				RequirementText: reqText,
+				CatalogSource:   catalogSource,
 			})
 		}
 	}
 
-	summary := summarizeDeltas(deltas)
-
 	return &DeltaReport{
 		PolicyID:         rp.Policy.Metadata.Id,
 		CatalogsCompared: catalogIDs,
-		Parameters:       deltas,
-		Summary:          summary,
+		Comparisons:      comparisons,
 	}, nil
+}
+
+type requirementTextIndex struct {
+	texts   map[string]string
+	sources map[string]string
+}
+
+func buildRequirementTextIndex(rp *ResolvedPolicy) requirementTextIndex {
+	idx := requirementTextIndex{
+		texts:   make(map[string]string),
+		sources: make(map[string]string),
+	}
+	for _, cat := range rp.ControlCatalogs {
+		for _, ctrl := range cat.Controls {
+			for _, ar := range ctrl.AssessmentRequirements {
+				idx.texts[ar.Id] = ar.Text
+				idx.sources[ar.Id] = cat.Metadata.Id
+			}
+		}
+	}
+	for _, gc := range rp.GuidanceCatalogs {
+		for _, gl := range gc.Guidelines {
+			idx.texts[gl.Id] = gl.Objective
+			idx.sources[gl.Id] = gc.Metadata.Id
+		}
+	}
+	return idx
+}
+
+func (idx requirementTextIndex) lookup(reqID string) (text, source string) {
+	return idx.texts[reqID], idx.sources[reqID]
+}
+
+// findGuidelineParameter is unused but kept for interface compatibility.
+func findGuidelineParameter(_ gemara.GuidanceCatalog, _ string) (string, bool) {
+	return "", false
 }

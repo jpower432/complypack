@@ -97,9 +97,14 @@ func TestHandleAnalyzeParameterDelta(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, "org-policy", response["policy"])
-		params, ok := response["parameters"].([]interface{})
+		comparisons, ok := response["comparisons"].([]interface{})
 		require.True(t, ok)
-		assert.Len(t, params, 1)
+		assert.Len(t, comparisons, 1)
+
+		first := comparisons[0].(map[string]interface{})
+		assert.Equal(t, "CTL-TLS-001-AR1", first["requirement_id"])
+		assert.Equal(t, "1.3", first["policy_value"])
+		assert.Equal(t, "TLS minimum version", first["requirement_text"])
 	})
 
 	t.Run("policy not found", func(t *testing.T) {

@@ -1,4 +1,4 @@
-# ADR 014: Parameter Delta Comparison Engine
+# ADR 014: Parameter Delta Gathering Engine
 
 **Status:** Proposed
 
@@ -6,32 +6,31 @@
 
 **Context:**
 
-Gemara Policies bind parameters at the org level (e.g., "session timeout = 15 minutes"), while Guidance Catalogs define framework-level expectations (e.g., "session timeout per organizational policy"). When multiple frameworks apply — say a regulatory framework and an organizational baseline — a single parameter can have values at three layers: framework guidance, org policy, and tech baseline.
+Gemara Policies bind parameters at the org level as structured YAML (L3), while Guidance Catalogs (L1) and Control Catalogs (L2) express parameter expectations in prose — requirement text like "the system MUST require multi-factor authentication" or "builds SHOULD achieve at least SLSA Build Level 1."
 
-Auditors need to see where the org's parameter values align with or differ from framework expectations. Doing this manually across dozens of parameters and multiple catalogs is error-prone and time-consuming.
+When preparing the mapping stage of the comply pipeline, the model needs to see L3 parameter values alongside the L1/L2 requirement text they map to. Without tooling, the model must make many MCP calls and manually cross-reference requirement IDs to build this picture.
 
 Three approaches were considered:
 
-1. **String equality only** — flag mismatches without any classification. Simple but loses the distinction between "framework defers to org" and "values genuinely differ."
-2. **Full directional comparison** — classify whether the org exceeds or falls short of the framework by comparing values numerically. Unreliable: "higher is stricter" holds for TLS versions (1.3 > 1.2) but not for session timeouts (15 < 30 means stricter). Algorithm comparisons (AES-256-GCM vs ChaCha20-Poly1305) aren't orderable at all.
-3. **Layer-based crosswalk with mismatch detection** — classify each parameter's specificity (concrete, generic, none), detect whether values match, and produce a verdict per parameter. Leave directional interpretation (which value is stricter) to the LLM in the mapping stage, which has the domain context to judge.
+1. **No tool** — the model reads policy and catalog resources via MCP and cross-references manually. Works but requires many calls and is error-prone for large catalogs.
+2. **Heuristic comparison engine** — classify parameter specificity (concrete vs generic) via string matching, compute verdicts (aligned, mismatch, org_binds_generic). Rejected: heuristics for detecting generic language are brittle, and interpreting whether values differ meaningfully is what the model does well.
+3. **Gathering engine** — walk the resolved policy graph, pair each structured L3 parameter with the L1/L2 requirement text it maps to, return them side by side. Let the model interpret the relationship.
 
-Option 3 was chosen. The deterministic engine handles what it's good at — detecting alignment, mismatches, generic-to-concrete bindings, and coverage gaps. The LLM handles what it's good at — interpreting whether "1.3 vs 1.2" means the org is stricter or more lenient for a given parameter.
+Option 3 was chosen. The engine handles what it's good at — traversing the resolved policy graph and collecting structured pairs. The model handles what it's good at — interpreting prose and judging parameter relationships.
 
 **Decision:**
 
-Implement a parameter delta comparison engine (`requirement.AnalyzeDelta`) that crosswalks parameters across framework, org policy, and tech baseline layers. Each parameter receives a verdict:
+Implement a parameter gathering engine (`requirement.AnalyzeDelta`) that pairs L3 parameter values with L1/L2 requirement text across the resolved policy graph. Each pair contains:
 
-- `aligned` — values match
-- `mismatch` — values differ; the caller interprets directionality
-- `org_binds_generic` — framework defers to org; org provides a concrete value
-- `not_covered` — no framework value exists for comparison
+- `requirement_id` — which requirement the parameter maps to
+- `label` — the parameter name
+- `policy_value` — the structured value from the L3 Policy
+- `requirement_text` — the prose from the L1/L2 catalog
 
-Expose this as the `analyze_parameter_delta` MCP tool so the `/comply` pipeline's mapping stage can read delta reports directly from the server. The mapping stage LLM interprets each `mismatch` verdict in domain context and presents its assessment to the user for confirmation.
+Expose this as the `analyze_parameter_delta` MCP tool so the `/comply` pipeline's mapping stage can read comparisons directly from the server. The mapping stage model interprets each pair in domain context and presents its assessment to the user.
 
 **Consequences:**
 
-- The mapping stage of the comply pipeline consumes delta reports from MCP rather than computing them in-skill — no hallucinated parameter comparisons
-- Directional interpretation ("which is stricter") is the LLM's responsibility, not the engine's — this correctly handles TLS versions, timeouts, algorithms, and any future parameter types without engine changes
-- The `tech_baseline` layer is structurally present but not yet populated from Gemara data — `findGuidelineParameter` is a stub awaiting Guidance Catalog parameter extraction
-- The engine is intentionally simple: no version parsing, no numeric comparison, no type detection — just string equality and specificity classification
+- The mapping stage consumes structured pairs from MCP rather than manually cross-referencing artifacts
+- Interpretation of parameter relationships (which is stricter, whether values conflict) is the model's responsibility — no heuristics
+- The engine is intentionally simple: traverse the graph, collect pairs, return them

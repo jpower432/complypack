@@ -10,67 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCompareValues_Aligned(t *testing.T) {
-	fw := ParameterLayer{Source: "framework", Value: "1.3", Specificity: SpecificityConcrete}
-	org := ParameterLayer{Source: "org-policy", Value: "1.3", Specificity: SpecificityConcrete}
-
-	verdict := CompareValues(fw, org)
-	assert.Equal(t, VerdictAligned, verdict)
-}
-
-func TestCompareValues_Mismatch(t *testing.T) {
-	t.Run("version strings", func(t *testing.T) {
-		fw := ParameterLayer{Source: "fw", Value: "1.2", Specificity: SpecificityConcrete}
-		org := ParameterLayer{Source: "org", Value: "1.3", Specificity: SpecificityConcrete}
-		verdict := CompareValues(fw, org)
-		assert.Equal(t, VerdictMismatch, verdict)
-	})
-
-	t.Run("numeric thresholds", func(t *testing.T) {
-		fw := ParameterLayer{Source: "fw", Value: "30", Specificity: SpecificityConcrete}
-		org := ParameterLayer{Source: "org", Value: "60", Specificity: SpecificityConcrete}
-		verdict := CompareValues(fw, org)
-		assert.Equal(t, VerdictMismatch, verdict)
-	})
-
-	t.Run("algorithms", func(t *testing.T) {
-		fw := ParameterLayer{Source: "fw", Value: "AES-256-GCM", Specificity: SpecificityConcrete}
-		org := ParameterLayer{Source: "org", Value: "ChaCha20-Poly1305", Specificity: SpecificityConcrete}
-		verdict := CompareValues(fw, org)
-		assert.Equal(t, VerdictMismatch, verdict)
-	})
-}
-
-func TestCompareValues_OrgBindsGeneric(t *testing.T) {
-	fw := ParameterLayer{Source: "fw", Value: "per organizational requirements", Specificity: SpecificityGeneric}
-	org := ParameterLayer{Source: "org", Value: "MFA + bastion host", Specificity: SpecificityConcrete}
-	verdict := CompareValues(fw, org)
-	assert.Equal(t, VerdictOrgBindsGeneric, verdict)
-}
-
-func TestCompareValues_NotCovered(t *testing.T) {
-	t.Run("both none", func(t *testing.T) {
-		fw := ParameterLayer{Specificity: SpecificityNone}
-		org := ParameterLayer{Specificity: SpecificityNone}
-		verdict := CompareValues(fw, org)
-		assert.Equal(t, VerdictNotCovered, verdict)
-	})
-
-	t.Run("framework none", func(t *testing.T) {
-		fw := ParameterLayer{Specificity: SpecificityNone}
-		org := ParameterLayer{Source: "org", Value: "90", Specificity: SpecificityConcrete}
-		verdict := CompareValues(fw, org)
-		assert.Equal(t, VerdictNotCovered, verdict)
-	})
-
-	t.Run("org none", func(t *testing.T) {
-		fw := ParameterLayer{Source: "fw", Value: "90", Specificity: SpecificityConcrete}
-		org := ParameterLayer{Specificity: SpecificityNone}
-		verdict := CompareValues(fw, org)
-		assert.Equal(t, VerdictNotCovered, verdict)
-	})
-}
-
 func testDeltaArtifactSet() *ArtifactSet {
 	catalog := &gemara.ControlCatalog{
 		Metadata: gemara.Metadata{Id: "container-baseline"},
@@ -141,8 +80,20 @@ func TestAnalyzeDelta(t *testing.T) {
 
 	assert.Equal(t, "org-parent-policy", report.PolicyID)
 	assert.Contains(t, report.CatalogsCompared, "container-baseline")
-	assert.Len(t, report.Parameters, 2)
-	assert.Equal(t, report.Summary.Total, 2)
+	assert.Len(t, report.Comparisons, 2)
+
+	tls := report.Comparisons[0]
+	assert.Equal(t, "CTL-TLS-001-AR1", tls.RequirementID)
+	assert.Equal(t, "tls_minimum_version", tls.Label)
+	assert.Equal(t, "1.3", tls.PolicyValue)
+	assert.Equal(t, "org-parent-policy", tls.PolicySource)
+	assert.Equal(t, "TLS minimum version must be enforced", tls.RequirementText)
+	assert.Equal(t, "container-baseline", tls.CatalogSource)
+
+	cert := report.Comparisons[1]
+	assert.Equal(t, "CTL-CERT-001-AR1", cert.RequirementID)
+	assert.Equal(t, "90", cert.PolicyValue)
+	assert.Equal(t, "Certificate validity must not exceed maximum", cert.RequirementText)
 }
 
 func TestAnalyzeDelta_NilPolicy(t *testing.T) {

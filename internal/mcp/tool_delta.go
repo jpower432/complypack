@@ -14,7 +14,7 @@ import (
 func createAnalyzeParameterDeltaTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "analyze_parameter_delta",
-		Description: "Crosswalk parameters across all frameworks in a resolved policy. Returns per-parameter verdicts (aligned, mismatch, org_binds_generic, not_covered) and summary counts. Mismatch means the values differ — the caller determines which is stricter based on domain context.",
+		Description: "Gather parameter comparisons across a resolved policy. Returns structured L3 parameter values alongside the L1/L2 requirement text they map to. The caller interprets the relationship — the tool does not judge.",
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{

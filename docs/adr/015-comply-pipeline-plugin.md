@@ -11,14 +11,14 @@ ComplyPack's MCP server provides compliance data (controls, parameters, resolved
 Three approaches were considered:
 
 1. **Hardcoded CLI workflow** — `complypack comply --stage scoping`. Rigid; can't adapt to user context or partial completion.
-2. **Autonomous agent loop** — a single agent prompt that runs all stages. Prone to hallucinating control IDs and parameter values when context windows grow large.
+2. **Autonomous agent loop** — a single agent prompt that runs all stages. Risk of generating control IDs or parameter values from model memory rather than source data when context windows grow large.
 3. **Plugin skills with MCP grounding** — decompose the pipeline into discrete skills (`/comply:pipeline`, `/comply:pack`, `/comply:setup`), each reading from MCP resources at every step.
 
-Option 2 was rejected on safety grounds: an AI agent hallucinated a control ID in a real evidence registry during testing. The core safety property is that every stage must read control IDs, requirement IDs, and parameter values from MCP resources — never from model memory.
+Option 2 was rejected because the core safety property is that every stage must read control IDs, requirement IDs, and parameter values from MCP resources — never from model memory. A single long-running agent loop makes this harder to enforce.
 
 Option 1 was rejected because audit workflows are inherently conversational: auditors need to review scoping decisions, adjust parameter bindings, and approve the applicability statement before it's finalized.
 
-Option 3 was chosen. Skills provide structured guidance while keeping the human in the loop. MCP grounding prevents hallucination. The pipeline router checks `.complytime/` artifact state to resume from the correct stage.
+Option 3 was chosen. Skills provide structured guidance while keeping the human in the loop. MCP grounding ensures data integrity. The pipeline router checks `.complytime/` artifact state to resume from the correct stage.
 
 **Decision:**
 
