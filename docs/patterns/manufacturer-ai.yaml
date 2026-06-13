@@ -1,0 +1,45 @@
+persona:
+  name: Manufacturer (AI Governance)
+  description: >-
+    Organization building or deploying AI systems, pursuing ISO 42001
+    certification or meeting AI governance requirements
+
+driver:
+  name: ISO 42001
+  description: >-
+    AI management system standard. Organizations pursue certification
+    to demonstrate responsible AI governance to customers, regulators,
+    and partners.
+
+catalog:
+  name: AIGS Baseline
+  description: >-
+    IBM AI Security Baseline. A minimum set of governance and security
+    requirements for AI projects, scaled by project maturity. Extends
+    the OpenSSF OSPS Baseline to cover AI-specific concerns around
+    development, deployment, and management of AI systems.
+
+governance:
+  name: AI Security Policy
+  description: >-
+    Organization's AI governance policy and internal technology
+    baselines for AI systems.
+
+scopingModel:
+  name: AI System Architecture
+  description: >-
+    Control selection driven by the AI system's architecture — model
+    type, deployment model, data sensitivity, human oversight level,
+    and risk classification.
+
+applicability:
+  name: AI System Applicability Statement
+  description: >-
+    AI system-level applicability statement scoped by architecture
+    and risk classification.
+
+evaluation:
+  name: Assessment Logic
+  description: Fine-grained assessment logic derived from the child policy
+  examples:
+    - Rego

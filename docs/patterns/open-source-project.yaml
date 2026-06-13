@@ -1,0 +1,51 @@
+persona:
+  name: Foundation-Backed Open Source Project
+  description: >-
+    An open source project under a foundation with CRA steward
+    obligations, serving downstream consumers with compliance needs
+
+driver:
+  name: CRA Steward Obligations and Downstream Consumer Demand
+  description: >-
+    The foundation may have CRA steward obligations around security policy,
+    vulnerability handling, and cooperation with market surveillance
+    authorities. Downstream consumers (manufacturers, enterprises)
+    need assurance that their open source dependencies meet security
+    expectations.
+
+catalog:
+  name: OSPS Baseline
+  description: >-
+    Open Source Project Security Baseline. A set of security controls
+    organized by maturity level for open source projects.
+
+governance:
+  name: Ecosystem Governance
+  description: >-
+    Foundation's security policy, processes, and project oversight
+    combined with security decisions made within the project's own
+    open source governance process. The foundation sets parameter
+    floors; the project makes decisions within that framework.
+
+scopingModel:
+  name: Maturity Level
+  description: >-
+    OSPS Baseline organizes controls by maturity level. Projects
+    self-assess their maturity and scope to the controls that apply
+    at that level.
+  levels:
+    - "1"
+    - "2"
+    - "3"
+
+applicability:
+  name: Project Applicability Statement
+  description: >-
+    The project's applicability statement demonstrating it meets the
+    foundation's parent policy at its assessed maturity level.
+
+evaluation:
+  name: Assessment Logic
+  description: Fine-grained assessment logic derived from the child policy
+  examples:
+    - Rego

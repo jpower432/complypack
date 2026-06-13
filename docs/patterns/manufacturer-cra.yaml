@@ -1,0 +1,52 @@
+persona:
+  name: Manufacturer (CRA Open Source Consumption)
+  description: >-
+    Manufacturer placing products with digital elements on the EU
+    market, performing due diligence on open source dependencies
+
+driver:
+  name: Cyber Resilience Act
+  description: >-
+    CRA obligates manufacturers to ensure the security of products
+    with digital elements, including due diligence on open source
+    components they consume.
+
+catalog:
+  name: CrabFOMA / CrabFOSC
+  description: >-
+    CRA Baseline for Open Source Manufacturers Assessment and its
+    subset CRA Baseline for Open Source Consumption. Operationalizes
+    CRA requirements into assessable due diligence controls for
+    evaluating open source dependencies, organized by component
+    risk tier to assist with understanding posture.
+  examples:
+    - CrabFOMA
+    - CrabFOSC
+
+governance:
+  name: Product Security Policy
+  description: >-
+    Organization's product security policy and internal technology
+    baselines.
+
+scopingModel:
+  name: Component Risk Tier
+  description: >-
+    CrabFOSC classifies open source components by risk tier. Higher
+    risk components require additional due diligence (build from
+    source, static analysis, maintainer reputation assessment).
+  levels:
+    - low
+    - high
+
+applicability:
+  name: Product Applicability Statement
+  description: >-
+    Product-level applicability statement covering the manufacturer's
+    due diligence posture for open source consumption.
+
+evaluation:
+  name: Assessment Logic
+  description: Fine-grained assessment logic derived from the child policy
+  examples:
+    - Rego

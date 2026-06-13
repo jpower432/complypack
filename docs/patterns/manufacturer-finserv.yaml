@@ -1,0 +1,46 @@
+persona:
+  name: Manufacturer (Financial Services Cloud)
+  description: >-
+    Financial services organization deploying workloads to public
+    cloud, subject to financial regulatory requirements
+
+driver:
+  name: Financial Regulation
+  description: >-
+    Financial services regulators require demonstrable controls for
+    cloud deployments. Organizations need a consistent control
+    framework across cloud providers to satisfy regulatory
+    examinations and internal audit.
+
+catalog:
+  name: FINOS Common Cloud Controls
+  description: >-
+    A unified set of cybersecurity, resiliency, and compliance
+    controls for common cloud services across major cloud providers.
+    Published by the FINOS foundation with steering from Citi,
+    Morgan Stanley, LSEG, RBC, BlackRock, and Red Hat.
+
+governance:
+  name: Cloud Security Policy
+  description: >-
+    Organization's cloud security policy and internal technology
+    baselines for cloud deployments.
+
+scopingModel:
+  name: Cloud Service Taxonomy
+  description: >-
+    FINOS CCC defines a taxonomy of cloud services. Control
+    applicability is determined by which services the organization
+    consumes and their deployment configuration.
+
+applicability:
+  name: Cloud Deployment Applicability Statement
+  description: >-
+    Deployment-level applicability statement covering the
+    organization's cloud control posture.
+
+evaluation:
+  name: Assessment Logic
+  description: Fine-grained assessment logic derived from the child policy
+  examples:
+    - Rego
