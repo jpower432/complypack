@@ -127,6 +127,54 @@ func TestHandleGetAssessmentRequirements(t *testing.T) {
 		assert.Len(t, requirements, 3)
 	})
 
+	t.Run("catalog name fallback", func(t *testing.T) {
+		catalog := &gemara.ControlCatalog{
+			Metadata: gemara.Metadata{Id: "bare-catalog"},
+			Controls: []gemara.Control{
+				{
+					Id: "CAT-001",
+					AssessmentRequirements: []gemara.AssessmentRequirement{
+						{Id: "CAT-001-AR1", Text: "Catalog requirement", Applicability: []string{"maturity-1"}},
+					},
+				},
+			},
+		}
+		catalogStore := &ResourceStore{
+			artifacts: map[string]any{"bare-catalog": catalog},
+			resolved:  map[string]*requirement.ResolvedPolicy{},
+			schemas:   map[string][]byte{},
+		}
+		catalogHandler := handleGetAssessmentRequirements(catalogStore)
+
+		input := map[string]interface{}{
+			"catalogName": "bare-catalog",
+		}
+		inputJSON, err := json.Marshal(input)
+		require.NoError(t, err)
+
+		req := &mcp.CallToolRequest{
+			Params: &mcp.CallToolParamsRaw{
+				Arguments: json.RawMessage(inputJSON),
+			},
+		}
+
+		result, err := catalogHandler(context.Background(), req)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		textContent, ok := result.Content[0].(*mcp.TextContent)
+		require.True(t, ok)
+
+		var response map[string]interface{}
+		err = json.Unmarshal([]byte(textContent.Text), &response)
+		require.NoError(t, err)
+
+		assert.Equal(t, float64(1), response["count"])
+		requirements := response["requirements"].([]interface{})
+		firstReq := requirements[0].(map[string]interface{})
+		assert.Equal(t, "CAT-001-AR1", firstReq["id"])
+	})
+
 	t.Run("policy not found", func(t *testing.T) {
 		input := map[string]interface{}{
 			"catalogName": "nonexistent",
