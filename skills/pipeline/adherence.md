@@ -37,55 +37,65 @@ From the delta report's `sources`, build `mapping_references`:
 
 ### Step 4: Build Assessment Plans
 
-Group by `requirement_id`. Each plan:
-- `requirement_id`
+Group by `requirement-id`. Each plan:
+- `id` — unique plan identifier
+- `requirement-id` — the assessment requirement this plan addresses
 - `frequency` (e.g., "30d", "90d", "365d")
-- `evaluation_methods` (e.g., "automated", "manual_review", "attestation")
-- `evidence_requirements`
-- `parameters` — frozen values from harmonization
+- `evaluation-methods` — list of `{id, type: Behavioral|Intent, mode: Automated|Manual}`
+- `evidence-requirements` — what evidence is collected
+- `parameters` — frozen values from harmonization, each with `id`, `label`, `accepted-values`, `description`
 
 ### Step 5: Compile the Policy
 
 ```yaml
-title: "<System> Policy"
+title: "<System Name> Policy"
 metadata:
-  id: <id>
+  id: <system-name>-policy
   gemara-version: v1.0.0
   type: Policy
-  description: <system description>
+  description: "<system description>"
   author:
-    id: <user id>
-    name: <user name>
+    id: <author-id>
+    name: <author-name>
     type: Software Assisted
-  mapping_references:
+  mapping-references:
     - id: <ref-id>
-      metadata_id: <metadata-id>
+      title: "<reference title>"
+      version: "<version>"
 contacts:
   responsible:
-    - name: <contact name>
+    - name: "<contact name>"
   accountable:
-    - name: <contact name>
+    - name: "<contact name>"
 scope:
   in:
     technologies:
-      - <system profile>
+      - <technology from system profile>
+    groups:
+      - <applicability group, e.g. maturity-1, maturity-2>
 imports:
   catalogs:
-    - reference_id: <ref-id>
+    - reference-id: <ref-id>
   guidance:
-    - reference_id: <ref-id>
+    - reference-id: <ref-id>
 adherence:
-  assessment_plans:
-    - requirement_id: "<req-id>"
+  assessment-plans:
+    - id: <plan-id>
+      requirement-id: "<req-id>"
       frequency: "<cadence>"
-      evaluation_methods:
-        - method: "<method>"
-      evidence_requirements: "<what>"
+      evaluation-methods:
+        - id: <method-id>
+          type: Behavioral
+          mode: Automated
+      evidence-requirements: "<what>"
       parameters:
-        - label: "<label>"
-          accepted_values: ["<value>"]
+        - id: <param-id>
+          label: "<label>"
+          accepted-values: ["<value>"]
           description: "<rationale>"
 ```
+
+Use `scope.in.groups` for applicability groups from the scoping stage (e.g., maturity levels, risk tiers). This scopes the policy to only the controls that match those groups.
 
 ### Step 6: Validate
 
