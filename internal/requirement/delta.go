@@ -2,11 +2,7 @@
 
 package requirement
 
-import (
-	"fmt"
-
-	"github.com/gemaraproj/go-gemara"
-)
+import "fmt"
 
 // ParameterComparison pairs a structured L3 parameter with the
 // L1/L2 requirement text it maps to. The caller interprets the
@@ -100,9 +96,4 @@ func buildRequirementTextIndex(rp *ResolvedPolicy) requirementTextIndex {
 
 func (idx requirementTextIndex) lookup(reqID string) (text, source string) {
 	return idx.texts[reqID], idx.sources[reqID]
-}
-
-// findGuidelineParameter is unused but kept for interface compatibility.
-func findGuidelineParameter(_ gemara.GuidanceCatalog, _ string) (string, bool) {
-	return "", false
 }
