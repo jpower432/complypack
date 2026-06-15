@@ -47,15 +47,28 @@ Group by `requirement_id`. Each plan:
 ### Step 5: Compile the Policy
 
 ```yaml
-gemara: v1.0.0
-kind: Policy
+title: "<System> Policy"
 metadata:
-  id: <system-name>-policy
-  title: "<System Name> Policy"
-  created: "<today>"
-mapping_references:
-  - id: <ref-id>
-    metadata_id: <metadata-id>
+  id: <id>
+  gemara-version: v1.0.0
+  type: Policy
+  description: <system description>
+  author:
+    id: <user id>
+    name: <user name>
+    type: Software Assisted
+  mapping_references:
+    - id: <ref-id>
+      metadata_id: <metadata-id>
+contacts:
+  responsible:
+    - name: <contact name>
+  accountable:
+    - name: <contact name>
+scope:
+  in:
+    technologies:
+      - <system profile>
 imports:
   catalogs:
     - reference_id: <ref-id>
@@ -76,7 +89,7 @@ adherence:
 
 ### Step 6: Validate
 
-Write `.complytime/child-policy.yaml`. If the Gemara MCP server is available, validate against the schema.
+Write `.complytime/child-policy.yaml`. If the Gemara MCP server is available, validate against the schema with the Policy definition.
 
 ### Step 7: Present Summary
 
