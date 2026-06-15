@@ -28,7 +28,7 @@ Implement the comply pipeline as plugin skills:
 - **`/comply:pack`** — generates assessment logic after pipeline completion
 - **`/comply:setup`** — configures `.mcp.json` for the user's environment
 
-Each stage reads exclusively from MCP resources. The pipeline produces Gemara Policy artifacts — functionally equivalent to an ISO 27001 Statement of Applicability or a NIST System Security Plan.
+Each stage reads exclusively from MCP resources. The pipeline produces Gemara Policy artifacts.
 
 **Consequences:**
 

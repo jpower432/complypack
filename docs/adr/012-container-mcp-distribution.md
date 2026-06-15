@@ -8,7 +8,7 @@
 
 ComplyPack's MCP server is a Go binary that users must build locally. Issue #24 requires single-click distribution. Four options were evaluated:
 
-1. **Container image on GHCR** — `docker run --rm -i ghcr.io/complytime/complypack`
+1. **Container image** — `docker run --rm -i ghcr.io/complytime/complypack`
 2. **Binary download via plugin SessionStart hook** — download pre-built binaries from GitHub Releases into `~/.claude/plugins/data/`
 3. **`go install`** — users install via Go toolchain
 4. **Homebrew tap** — formula for macOS/Linux
@@ -19,11 +19,9 @@ Option 3 requires the Go toolchain on every user's machine — a non-starter for
 
 Option 4 adds a distribution channel to maintain and doesn't cover Fedora users natively.
 
-Option 1 is the only approach that is both trusted (GHCR handles image distribution, cosign handles signing) and already established in the plugin ecosystem (the Terraform plugin uses `docker` as the MCP command).
-
 **Decision:**
 
-Distribute the MCP server as a multi-arch container image on GHCR (`ghcr.io/complytime/complypack`). Sign images with cosign (keyless/OIDC). Users invoke via `docker run --rm -i` or `podman run --rm -i` in their `.mcp.json`.
+Distribute the MCP server as a multi-arch container image (`ghcr.io/complytime/complypack`). Sign images with cosign (keyless/OIDC). Users invoke via `docker run --rm -i` or `podman run --rm -i` in their `.mcp.json`.
 
 **Consequences:**
 
