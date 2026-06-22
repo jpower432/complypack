@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/complytime/complypack/internal/requirement"
+	"github.com/gemaraproj/go-gemara"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -66,7 +67,10 @@ func handleGetAssessmentRequirements(store *ResourceStore) mcp.ToolHandler {
 
 		rp, found := store.resolved[input.CatalogName]
 		if !found {
-			return nil, fmt.Errorf("policy %q not found", input.CatalogName)
+			rp, found = resolveFromCatalog(store, input.CatalogName)
+			if !found {
+				return nil, fmt.Errorf("policy or catalog %q not found", input.CatalogName)
+			}
 		}
 		requirements := extractFromResolvedPolicy(rp, input.ControlID, input.Scope)
 
@@ -90,6 +94,39 @@ func handleGetAssessmentRequirements(store *ResourceStore) mcp.ToolHandler {
 			},
 		}, nil
 	}
+}
+
+// resolveFromCatalog wraps a bare catalog in a synthetic ResolvedPolicy so
+// get_assessment_requirements works with catalog names, not just policy names.
+func resolveFromCatalog(store *ResourceStore, name string) (*requirement.ResolvedPolicy, bool) {
+	art, ok := store.artifacts[name]
+	if !ok {
+		return nil, false
+	}
+	cat, ok := art.(*gemara.ControlCatalog)
+	if !ok {
+		return nil, false
+	}
+	set := &requirement.ArtifactSet{
+		Catalogs: map[string]*gemara.ControlCatalog{name: cat},
+		Policies: make(map[string]*gemara.Policy),
+		Guidance: make(map[string]*gemara.GuidanceCatalog),
+		Mappings: make(map[string]*gemara.MappingDocument),
+	}
+	syntheticPolicy := gemara.Policy{
+		Metadata: gemara.Metadata{
+			Id:                name + "-synthetic",
+			MappingReferences: []gemara.MappingReference{{Id: name}},
+		},
+		Imports: gemara.Imports{
+			Catalogs: []gemara.CatalogImport{{ReferenceId: name}},
+		},
+	}
+	rp, err := requirement.ResolvePolicy(syntheticPolicy, set)
+	if err != nil {
+		return nil, false
+	}
+	return rp, true
 }
 
 // extractFromResolvedPolicy extracts requirements from a resolved policy graph.
