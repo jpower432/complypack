@@ -56,6 +56,7 @@ func testDeltaStore() (*ResourceStore, *requirement.ArtifactSet) {
 		Catalogs: map[string]*gemara.ControlCatalog{"container-baseline": catalog},
 		Policies: map[string]*gemara.Policy{"org-policy": policy},
 		Guidance: make(map[string]*gemara.GuidanceCatalog),
+		Mappings: make(map[string]*gemara.MappingDocument),
 	}
 
 	rp, _ := requirement.ResolvePolicy(*policy, set)

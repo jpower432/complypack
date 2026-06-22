@@ -8,12 +8,18 @@ import "fmt"
 // L1/L2 requirement text it maps to. The caller interprets the
 // relationship — the engine does not judge.
 type ParameterComparison struct {
-	RequirementID   string `json:"requirement_id"`
-	Label           string `json:"label"`
-	PolicyValue     string `json:"policy_value"`
-	PolicySource    string `json:"policy_source"`
+	// RequirementID is the assessment requirement this comparison targets (e.g. "CTL-TLS-001-AR1").
+	RequirementID string `json:"requirement_id"`
+	// Label is the parameter name from the policy's assessment plan (e.g. "tls_minimum_version").
+	Label string `json:"label"`
+	// PolicyValue is the concrete value the L3 policy sets for this parameter.
+	PolicyValue string `json:"policy_value"`
+	// PolicySource is the ID of the policy that provides the parameter value.
+	PolicySource string `json:"policy_source"`
+	// RequirementText is the L1/L2 assessment requirement text from the catalog.
 	RequirementText string `json:"requirement_text"`
-	CatalogSource   string `json:"catalog_source"`
+	// CatalogSource is the ID of the catalog that defines the requirement.
+	CatalogSource string `json:"catalog_source"`
 }
 
 // DeltaReport is the result of gathering parameter comparisons

@@ -65,6 +65,7 @@ func testDeltaArtifactSet() *ArtifactSet {
 		Catalogs: map[string]*gemara.ControlCatalog{"container-baseline": catalog},
 		Policies: map[string]*gemara.Policy{"org-parent-policy": policy},
 		Guidance: make(map[string]*gemara.GuidanceCatalog),
+		Mappings: make(map[string]*gemara.MappingDocument),
 	}
 }
 

@@ -105,6 +105,7 @@ func TestResolvedPolicy_ImportedGuidanceIDs(t *testing.T) {
 		Catalogs: map[string]*gemara.ControlCatalog{"test-catalog": catalog},
 		Policies: map[string]*gemara.Policy{"test-policy": policy},
 		Guidance: map[string]*gemara.GuidanceCatalog{"guidance-1": guidanceCatalog},
+		Mappings: make(map[string]*gemara.MappingDocument),
 	}
 
 	rp, err := ResolvePolicy(*policy, set)
