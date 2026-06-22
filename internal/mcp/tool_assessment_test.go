@@ -24,11 +24,12 @@ func testResolvedPolicy() *requirement.ResolvedPolicy {
 					{
 						Id:            "TEST-001-AR1",
 						Text:          "Test requirement",
-						Applicability: []string{"test"},
+						Applicability: []string{"maturity-1", "maturity-2", "maturity-3"},
 					},
 					{
-						Id:   "TEST-001-AR2",
-						Text: "Second requirement",
+						Id:            "TEST-001-AR2",
+						Text:          "Second requirement",
+						Applicability: []string{"maturity-2", "maturity-3"},
 					},
 				},
 			},
@@ -36,8 +37,9 @@ func testResolvedPolicy() *requirement.ResolvedPolicy {
 				Id: "TEST-002",
 				AssessmentRequirements: []gemara.AssessmentRequirement{
 					{
-						Id:   "TEST-002-AR1",
-						Text: "Third requirement",
+						Id:            "TEST-002-AR1",
+						Text:          "Third requirement",
+						Applicability: []string{"maturity-3"},
 					},
 				},
 			},
@@ -210,6 +212,31 @@ func TestHandleGetAssessmentRequirements(t *testing.T) {
 		params := firstReq["parameters"].(map[string]interface{})
 		assert.Equal(t, "90", params["threshold"])
 	})
+
+	t.Run("filter by scope", func(t *testing.T) {
+		input := map[string]interface{}{
+			"catalogName": "test-policy",
+			"scope":       []string{"maturity-2"},
+		}
+		inputJSON, err := json.Marshal(input)
+		require.NoError(t, err)
+
+		req := &mcp.CallToolRequest{
+			Params: &mcp.CallToolParamsRaw{
+				Arguments: json.RawMessage(inputJSON),
+			},
+		}
+
+		result, err := handler(context.Background(), req)
+		require.NoError(t, err)
+
+		textContent := result.Content[0].(*mcp.TextContent)
+		var response map[string]interface{}
+		err = json.Unmarshal([]byte(textContent.Text), &response)
+		require.NoError(t, err)
+
+		assert.Equal(t, float64(2), response["count"])
+	})
 }
 
 func TestCreateGetAssessmentRequirementsTool(t *testing.T) {
@@ -234,6 +261,10 @@ func TestCreateGetAssessmentRequirementsTool(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, "string", controlId["type"])
 
+	scope, ok := properties["scope"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "array", scope["type"])
+
 	required, ok := schema["required"].([]interface{})
 	require.True(t, ok)
 	assert.Contains(t, required, "catalogName")
@@ -243,20 +274,48 @@ func TestExtractFromResolvedPolicy(t *testing.T) {
 	rp := testResolvedPolicy()
 
 	t.Run("extract all", func(t *testing.T) {
-		results := extractFromResolvedPolicy(rp, "")
+		results := extractFromResolvedPolicy(rp, "", nil)
 		assert.Len(t, results, 3)
 	})
 
 	t.Run("filter by control", func(t *testing.T) {
-		results := extractFromResolvedPolicy(rp, "TEST-001")
+		results := extractFromResolvedPolicy(rp, "TEST-001", nil)
 		assert.Len(t, results, 2)
 		assert.Equal(t, "TEST-001", results[0].ControlID)
 		assert.Equal(t, "TEST-001", results[1].ControlID)
 	})
 
 	t.Run("parameters populated from assessment plans", func(t *testing.T) {
-		results := extractFromResolvedPolicy(rp, "TEST-001")
+		results := extractFromResolvedPolicy(rp, "TEST-001", nil)
 		assert.Equal(t, "90", results[0].Parameters["threshold"])
 		assert.Empty(t, results[1].Parameters)
+	})
+
+	t.Run("filter by scope", func(t *testing.T) {
+		results := extractFromResolvedPolicy(rp, "", []string{"maturity-2"})
+		assert.Len(t, results, 2)
+		for _, r := range results {
+			assert.Contains(t, r.Applicability, "maturity-2")
+		}
+	})
+
+	t.Run("filter by multiple scope values", func(t *testing.T) {
+		results := extractFromResolvedPolicy(rp, "", []string{"maturity-1", "maturity-3"})
+		assert.Len(t, results, 3)
+	})
+
+	t.Run("filter by scope and control", func(t *testing.T) {
+		results := extractFromResolvedPolicy(rp, "TEST-001", []string{"maturity-2"})
+		assert.Len(t, results, 2)
+	})
+
+	t.Run("scope filters out non-matching", func(t *testing.T) {
+		results := extractFromResolvedPolicy(rp, "", []string{"maturity-1"})
+		assert.Len(t, results, 1)
+	})
+
+	t.Run("nil scope returns all", func(t *testing.T) {
+		results := extractFromResolvedPolicy(rp, "", nil)
+		assert.Len(t, results, 3)
 	})
 }
