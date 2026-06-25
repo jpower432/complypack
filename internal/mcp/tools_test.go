@@ -25,7 +25,7 @@ func testLoadAllSchemas(t *testing.T) (map[string][]byte, map[string]cue.Value) 
 	ctx := context.Background()
 
 	refs := []config.SchemaRef{
-		{Platform: "ci-github-actions"},
+		{Platform: "kubernetes-deployment"},
 	}
 
 	schemaMap, cueSchemaMap, err := loadSchemas(ctx, refs, schema.DefaultRegistry())
@@ -46,6 +46,11 @@ func TestLoadSchemaFromIndex(t *testing.T) {
 		wantErr     bool
 		errContains string
 	}{
+		{
+			name:     "valid kubernetes-deployment platform",
+			platform: "kubernetes-deployment",
+			wantErr:  false,
+		},
 		{
 			name:     "valid ci-github-actions platform",
 			platform: "ci-github-actions",
@@ -130,22 +135,37 @@ func TestValidateTestDataAgainstSchema(t *testing.T) {
 		errContains string
 	}{
 		{
-			name: "valid github actions workflow",
+			name: "valid kubernetes deployment",
 			testData: map[string]interface{}{
-				"name": "CI",
-				"on":   "push",
-				"jobs": map[string]interface{}{
-					"build": map[string]interface{}{
-						"runs-on": "ubuntu-latest",
-						"steps": []interface{}{
-							map[string]interface{}{
-								"uses": "actions/checkout@v2",
+				"apiVersion": "apps/v1",
+				"kind":       "Deployment",
+				"metadata": map[string]interface{}{
+					"name": "test-deployment",
+				},
+				"spec": map[string]interface{}{
+					"selector": map[string]interface{}{
+						"matchLabels": map[string]interface{}{
+							"app": "test",
+						},
+					},
+					"template": map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"labels": map[string]interface{}{
+								"app": "test",
+							},
+						},
+						"spec": map[string]interface{}{
+							"containers": []interface{}{
+								map[string]interface{}{
+									"name":  "test",
+									"image": "nginx:latest",
+								},
 							},
 						},
 					},
 				},
 			},
-			platform:   "ci-github-actions",
+			platform:   "kubernetes-deployment",
 			wantErrors: false,
 		},
 		{
@@ -283,8 +303,14 @@ func TestBuildTestResultsResponse(t *testing.T) {
 }
 
 func TestHandleValidatePolicy(t *testing.T) {
-	// Create resource store
-	schemaMap, cueSchemaMap := testLoadAllSchemas(t)
+	// Create resource store with both kubernetes and ci schemas
+	ctx := context.Background()
+	refs := []config.SchemaRef{
+		{Platform: "kubernetes-deployment"},
+		{Platform: "kubernetes-pod"},
+	}
+	schemaMap, cueSchemaMap, err := loadSchemas(ctx, refs, schema.DefaultRegistry())
+	require.NoError(t, err)
 	store := NewResourceStore(map[string]any{}, nil, schemaMap, cueSchemaMap, evaluator.DefaultRegistry())
 
 	handler := handleValidatePolicy(store)
@@ -298,17 +324,17 @@ func TestHandleValidatePolicy(t *testing.T) {
 		wantContract  bool
 	}{
 		{
-			name:          "policy with contract violation for platform",
+			name:          "valid policy",
 			policyFile:    "testdata/policies/valid.rego",
-			platform:      "ci-github-actions",
-			wantValid:     false,
+			platform:      "kubernetes-pod",
+			wantValid:     true,
 			wantSyntaxErr: false,
-			wantContract:  true,
+			wantContract:  false,
 		},
 		{
 			name:          "syntax error",
 			policyFile:    "testdata/policies/syntax-error.rego",
-			platform:      "ci-github-actions",
+			platform:      "kubernetes-pod",
 			wantValid:     false,
 			wantSyntaxErr: true,
 			wantContract:  false,
@@ -316,7 +342,7 @@ func TestHandleValidatePolicy(t *testing.T) {
 		{
 			name:          "contract violation",
 			policyFile:    "testdata/policies/contract-violation.rego",
-			platform:      "ci-github-actions",
+			platform:      "kubernetes-pod",
 			wantValid:     false,
 			wantSyntaxErr: false,
 			wantContract:  true,
@@ -370,8 +396,14 @@ func TestHandleValidatePolicy(t *testing.T) {
 }
 
 func TestHandleTestPolicy(t *testing.T) {
-	// Create resource store
-	schemaMap, cueSchemaMap := testLoadAllSchemas(t)
+	// Create resource store with kubernetes schemas
+	ctx := context.Background()
+	refs := []config.SchemaRef{
+		{Platform: "kubernetes-deployment"},
+		{Platform: "kubernetes-pod"},
+	}
+	schemaMap, cueSchemaMap, err := loadSchemas(ctx, refs, schema.DefaultRegistry())
+	require.NoError(t, err)
 	store := NewResourceStore(map[string]any{}, nil, schemaMap, cueSchemaMap, evaluator.DefaultRegistry())
 
 	handler := handleTestPolicy(store)
@@ -388,20 +420,21 @@ func TestHandleTestPolicy(t *testing.T) {
 			name:       "valid test data",
 			policyFile: "testdata/policies/valid.rego",
 			testData: map[string]interface{}{
-				"name": "CI",
-				"on":   "push",
-				"jobs": map[string]interface{}{
-					"build": map[string]interface{}{
-						"runs-on": "ubuntu-latest",
-						"steps": []interface{}{
-							map[string]interface{}{
-								"uses": "actions/checkout@v2",
-							},
+				"apiVersion": "v1",
+				"kind":       "Pod",
+				"metadata": map[string]interface{}{
+					"name": "test-pod",
+				},
+				"spec": map[string]interface{}{
+					"containers": []interface{}{
+						map[string]interface{}{
+							"name":  "test",
+							"image": "nginx:latest",
 						},
 					},
 				},
 			},
-			platform:          "ci-github-actions",
+			platform:          "kubernetes-pod",
 			wantDataValid:     true,
 			wantTestsExecuted: true,
 		},
@@ -409,7 +442,8 @@ func TestHandleTestPolicy(t *testing.T) {
 			name:       "invalid platform",
 			policyFile: "testdata/policies/valid.rego",
 			testData: map[string]interface{}{
-				"name": "CI",
+				"apiVersion": "v1",
+				"kind":       "Pod",
 			},
 			platform:          "unknown",
 			wantDataValid:     false,
