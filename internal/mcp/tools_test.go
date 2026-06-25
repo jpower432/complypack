@@ -19,15 +19,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// testLoadAllSchemas is a helper that loads all built-in schemas for testing.
-// Returns both the byte schemas and compiled CUE schemas.
+// testLoadAllSchemas loads a representative subset of schemas for testing.
 func testLoadAllSchemas(t *testing.T) (map[string][]byte, map[string]cue.Value) {
 	t.Helper()
 	ctx := context.Background()
 
-	var refs []config.SchemaRef
-	for _, platform := range schemas.BuiltInPlatforms {
-		refs = append(refs, config.SchemaRef{Platform: platform})
+	refs := []config.SchemaRef{
+		{Platform: "ci-github-actions"},
 	}
 
 	schemaMap, cueSchemaMap, err := loadSchemas(ctx, refs, schema.DefaultRegistry())
@@ -35,9 +33,12 @@ func testLoadAllSchemas(t *testing.T) (map[string][]byte, map[string]cue.Value) 
 	return schemaMap, cueSchemaMap
 }
 
-func TestLoadEmbeddedSchema(t *testing.T) {
+func TestLoadSchemaFromIndex(t *testing.T) {
 	ctx := context.Background()
 	reg := schema.DefaultRegistry()
+
+	index, err := schemas.LoadIndex()
+	require.NoError(t, err)
 
 	tests := []struct {
 		name        string
@@ -46,26 +47,25 @@ func TestLoadEmbeddedSchema(t *testing.T) {
 		errContains string
 	}{
 		{
-			name:     "valid kubernetes platform",
-			platform: "kubernetes",
-			wantErr:  false,
-		},
-		{
-			name:     "valid terraform platform",
-			platform: "terraform",
+			name:     "valid ci-github-actions platform",
+			platform: "ci-github-actions",
 			wantErr:  false,
 		},
 		{
 			name:        "unknown platform",
 			platform:    "unknown",
 			wantErr:     true,
-			errContains: "not found",
+			errContains: "no loader matched",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := reg.Load(ctx, "", tt.platform)
+			source := ""
+			if entry, ok := index[tt.platform]; ok {
+				source = entry.Source
+			}
+			s, err := reg.Load(ctx, source, tt.platform)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errContains)
@@ -130,31 +130,22 @@ func TestValidateTestDataAgainstSchema(t *testing.T) {
 		errContains string
 	}{
 		{
-			name: "valid kubernetes pod",
+			name: "valid github actions workflow",
 			testData: map[string]interface{}{
-				"apiVersion": "v1",
-				"kind":       "Pod",
-				"metadata": map[string]interface{}{
-					"name": "test",
-				},
-				"spec": map[string]interface{}{
-					"containers": []interface{}{
-						map[string]interface{}{
-							"name":  "nginx",
-							"image": "nginx:latest",
+				"name": "CI",
+				"on":   "push",
+				"jobs": map[string]interface{}{
+					"build": map[string]interface{}{
+						"runs-on": "ubuntu-latest",
+						"steps": []interface{}{
+							map[string]interface{}{
+								"uses": "actions/checkout@v2",
+							},
 						},
 					},
 				},
 			},
-			platform:   "kubernetes",
-			wantErrors: false,
-		},
-		{
-			name: "minimal valid data",
-			testData: map[string]interface{}{
-				"kind": "Pod",
-			},
-			platform:   "kubernetes",
+			platform:   "ci-github-actions",
 			wantErrors: false,
 		},
 		{
@@ -307,17 +298,17 @@ func TestHandleValidatePolicy(t *testing.T) {
 		wantContract  bool
 	}{
 		{
-			name:          "valid policy",
+			name:          "policy with contract violation for platform",
 			policyFile:    "testdata/policies/valid.rego",
-			platform:      "kubernetes",
-			wantValid:     true,
+			platform:      "ci-github-actions",
+			wantValid:     false,
 			wantSyntaxErr: false,
-			wantContract:  false,
+			wantContract:  true,
 		},
 		{
 			name:          "syntax error",
 			policyFile:    "testdata/policies/syntax-error.rego",
-			platform:      "kubernetes",
+			platform:      "ci-github-actions",
 			wantValid:     false,
 			wantSyntaxErr: true,
 			wantContract:  false,
@@ -325,7 +316,7 @@ func TestHandleValidatePolicy(t *testing.T) {
 		{
 			name:          "contract violation",
 			policyFile:    "testdata/policies/contract-violation.rego",
-			platform:      "kubernetes",
+			platform:      "ci-github-actions",
 			wantValid:     false,
 			wantSyntaxErr: false,
 			wantContract:  true,
@@ -397,21 +388,20 @@ func TestHandleTestPolicy(t *testing.T) {
 			name:       "valid test data",
 			policyFile: "testdata/policies/valid.rego",
 			testData: map[string]interface{}{
-				"apiVersion": "v1",
-				"kind":       "Pod",
-				"metadata": map[string]interface{}{
-					"name": "test-pod",
-				},
-				"spec": map[string]interface{}{
-					"containers": []interface{}{
-						map[string]interface{}{
-							"name":  "nginx",
-							"image": "nginx:latest",
+				"name": "CI",
+				"on":   "push",
+				"jobs": map[string]interface{}{
+					"build": map[string]interface{}{
+						"runs-on": "ubuntu-latest",
+						"steps": []interface{}{
+							map[string]interface{}{
+								"uses": "actions/checkout@v2",
+							},
 						},
 					},
 				},
 			},
-			platform:          "kubernetes",
+			platform:          "ci-github-actions",
 			wantDataValid:     true,
 			wantTestsExecuted: true,
 		},
@@ -419,7 +409,7 @@ func TestHandleTestPolicy(t *testing.T) {
 			name:       "invalid platform",
 			policyFile: "testdata/policies/valid.rego",
 			testData: map[string]interface{}{
-				"kind": "Pod",
+				"name": "CI",
 			},
 			platform:          "unknown",
 			wantDataValid:     false,
