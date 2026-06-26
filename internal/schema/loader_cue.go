@@ -147,13 +147,19 @@ func loadFromCUERegistry(ctx context.Context, modulePath string, subPkg string) 
 		return cue.Value{}, fmt.Errorf("loading module %s: no instances returned", modPath)
 	}
 	if err := instances[0].Err; err != nil {
-		return cue.Value{}, fmt.Errorf("loading module %s@%s/%s: %w", modPath, version, subPkg, err)
+		if subPkg != "" {
+			return cue.Value{}, fmt.Errorf("loading module %s@%s/%s: %w", modPath, version, subPkg, err)
+		}
+		return cue.Value{}, fmt.Errorf("loading module %s@%s: %w", modPath, version, err)
 	}
 
 	cueCtx := cuecontext.New()
 	val := cueCtx.BuildInstance(instances[0])
 	if err := val.Err(); err != nil {
-		return cue.Value{}, fmt.Errorf("building schema from %s@%s/%s: %w", modPath, version, subPkg, err)
+		if subPkg != "" {
+			return cue.Value{}, fmt.Errorf("building schema from %s@%s/%s: %w", modPath, version, subPkg, err)
+		}
+		return cue.Value{}, fmt.Errorf("building schema from %s@%s: %w", modPath, version, err)
 	}
 
 	return val, nil

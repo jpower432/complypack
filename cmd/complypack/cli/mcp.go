@@ -155,7 +155,7 @@ func parseSourceFlags(sources []string) ([]config.GemaraSourceEntry, error) {
 
 // parseSchemaFlags converts --schema flag values into SchemaRef values.
 //
-//   - "kubernetes"                        -> SchemaRef{Platform: "kubernetes"} (embedded)
+//   - "kubernetes-deployment"             -> SchemaRef{Platform: "kubernetes-deployment"} (index default)
 //   - "ci-github-actions=cue://cue.dev/x/githubactions@v0#Workflow" -> SchemaRef{Platform: "ci-github-actions", Source: "cue://..."}
 func parseSchemaFlags(schemas []string) ([]config.SchemaRef, error) {
 	if len(schemas) == 0 {

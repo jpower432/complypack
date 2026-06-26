@@ -160,15 +160,7 @@ func runPrePackValidation(ctx context.Context, cfg *config.ComplyPackConfig, con
 	if len(cfg.Schemas) > 0 {
 		schemaReg := schema.DefaultRegistry()
 		for _, ref := range cfg.Schemas {
-			source := ref.Source
-			if source == "" && ref.Path != "" {
-				source = "file://" + ref.Path
-			}
-			if source == "" {
-				if entry, ok := index[ref.Platform]; ok {
-					source = entry.Source
-				}
-			}
+			source := schemas.ResolveSource(ref, index)
 
 			s, err := schemaReg.Load(ctx, source, ref.Platform)
 			if err != nil {

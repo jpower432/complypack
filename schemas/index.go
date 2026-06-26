@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/complytime/complypack/internal/config"
 	"gopkg.in/yaml.v3"
 )
 
@@ -39,4 +40,19 @@ func Platforms() []string {
 	}
 	sort.Strings(platforms)
 	return platforms
+}
+
+// ResolveSource returns the effective schema source for a SchemaRef,
+// checking explicit source, legacy path, and index defaults in order.
+func ResolveSource(ref config.SchemaRef, index map[string]IndexEntry) string {
+	if ref.Source != "" {
+		return ref.Source
+	}
+	if ref.Path != "" {
+		return "file://" + ref.Path
+	}
+	if entry, ok := index[ref.Platform]; ok {
+		return entry.Source
+	}
+	return ""
 }

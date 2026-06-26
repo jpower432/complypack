@@ -252,16 +252,7 @@ func loadSchemas(ctx context.Context, schemaRefs []config.SchemaRef, reg *schema
 
 	for _, ref := range schemaRefs {
 		platform := ref.Platform
-
-		source := ref.Source
-		if source == "" && ref.Path != "" {
-			source = "file://" + ref.Path
-		}
-		if source == "" {
-			if entry, ok := index[platform]; ok {
-				source = entry.Source
-			}
-		}
+		source := schemas.ResolveSource(ref, index)
 
 		s, err := reg.Load(ctx, source, platform)
 		if err != nil {
