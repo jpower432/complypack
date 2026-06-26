@@ -9,18 +9,42 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 	"github.com/complytime/complypack/internal/evaluator"
-	"github.com/complytime/complypack/schemas"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func loadTestCUESchema(t *testing.T, platform string) cue.Value {
+func loadTestCUESchemaInline(t *testing.T) cue.Value {
 	t.Helper()
-	data, err := schemas.GetBuiltInCUESchema(platform)
-	require.NoError(t, err)
-
 	ctx := cuecontext.New()
-	val := ctx.CompileBytes(data)
+	val := ctx.CompileString(`
+apiVersion?: string
+kind?:       string
+metadata?: {
+	name?:        string
+	namespace?:   string
+	labels?:      [string]: string
+	annotations?: [string]: string
+}
+spec?: {
+	replicas?: int
+	template?: {
+		spec?: {
+			containers?: [...{
+				name?:  string
+				image?: string
+				...
+			}]
+			...
+		}
+	}
+	containers?: [...{
+		name?:  string
+		image?: string
+		...
+	}]
+	...
+}
+`)
 	require.NoError(t, val.Err())
 	return val
 }
@@ -28,9 +52,9 @@ func loadTestCUESchema(t *testing.T, platform string) cue.Value {
 func TestValidate_ValidPolicies(t *testing.T) {
 	ctx := context.Background()
 	eval := &evaluator.OPA{}
-	schema := loadTestCUESchema(t, "kubernetes")
+	s := loadTestCUESchemaInline(t)
 
-	result, err := Validate(ctx, "testdata/valid", eval, schema, ValidationOptions{})
+	result, err := Validate(ctx, "testdata/valid", eval, []cue.Value{s}, ValidationOptions{})
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, result.FilesChecked)
@@ -42,9 +66,9 @@ func TestValidate_ValidPolicies(t *testing.T) {
 func TestValidate_SyntaxError(t *testing.T) {
 	ctx := context.Background()
 	eval := &evaluator.OPA{}
-	schema := loadTestCUESchema(t, "kubernetes")
+	s := loadTestCUESchemaInline(t)
 
-	result, err := Validate(ctx, "testdata/syntax-error", eval, schema, ValidationOptions{})
+	result, err := Validate(ctx, "testdata/syntax-error", eval, []cue.Value{s}, ValidationOptions{})
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, result.FilesChecked)
@@ -56,9 +80,9 @@ func TestValidate_SyntaxError(t *testing.T) {
 func TestValidate_ContractViolation(t *testing.T) {
 	ctx := context.Background()
 	eval := &evaluator.OPA{}
-	schema := loadTestCUESchema(t, "kubernetes")
+	s := loadTestCUESchemaInline(t)
 
-	result, err := Validate(ctx, "testdata/contract-violation", eval, schema, ValidationOptions{})
+	result, err := Validate(ctx, "testdata/contract-violation", eval, []cue.Value{s}, ValidationOptions{})
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, result.FilesChecked)
@@ -70,9 +94,9 @@ func TestValidate_ContractViolation(t *testing.T) {
 func TestValidate_EmptyDirectory(t *testing.T) {
 	ctx := context.Background()
 	eval := &evaluator.OPA{}
-	schema := loadTestCUESchema(t, "kubernetes")
+	s := loadTestCUESchemaInline(t)
 
-	result, err := Validate(ctx, "testdata/empty", eval, schema, ValidationOptions{})
+	result, err := Validate(ctx, "testdata/empty", eval, []cue.Value{s}, ValidationOptions{})
 	require.NoError(t, err)
 
 	assert.Equal(t, 0, result.FilesChecked)
@@ -82,9 +106,9 @@ func TestValidate_EmptyDirectory(t *testing.T) {
 func TestValidate_SkipTests(t *testing.T) {
 	ctx := context.Background()
 	eval := &evaluator.OPA{}
-	schema := loadTestCUESchema(t, "kubernetes")
+	s := loadTestCUESchemaInline(t)
 
-	result, err := Validate(ctx, "testdata/valid", eval, schema, ValidationOptions{
+	result, err := Validate(ctx, "testdata/valid", eval, []cue.Value{s}, ValidationOptions{
 		SkipTests: true,
 	})
 	require.NoError(t, err)
@@ -98,12 +122,12 @@ func TestValidate_NoSchema(t *testing.T) {
 	ctx := context.Background()
 	eval := &evaluator.OPA{}
 
-	result, err := Validate(ctx, "testdata/valid", eval, cue.Value{}, ValidationOptions{})
+	result, err := Validate(ctx, "testdata/valid", eval, nil, ValidationOptions{})
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, result.FilesChecked)
 	assert.Empty(t, result.SyntaxErrors)
-	assert.Empty(t, result.ContractViolations, "contract check should be skipped without schema")
+	assert.Empty(t, result.ContractViolations, "contract check should be skipped without schemas")
 	assert.True(t, result.Valid())
 }
 
@@ -111,9 +135,53 @@ func TestValidate_NonexistentDirectory(t *testing.T) {
 	ctx := context.Background()
 	eval := &evaluator.OPA{}
 
-	_, err := Validate(ctx, "testdata/nonexistent", eval, cue.Value{}, ValidationOptions{})
+	_, err := Validate(ctx, "testdata/nonexistent", eval, nil, ValidationOptions{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "collecting policy files")
+}
+
+func TestValidate_MultiSchema(t *testing.T) {
+	ctx := context.Background()
+	eval := &evaluator.OPA{}
+
+	cueCtx := cuecontext.New()
+
+	k8sSchema := cueCtx.CompileString(`
+apiVersion?: string
+kind?:       string
+metadata?: {
+	name?:      string
+	namespace?: string
+}
+spec?: {
+	replicas?: int
+	template?: _
+}
+`)
+	require.NoError(t, k8sSchema.Err())
+
+	ciSchema := cueCtx.CompileString(`
+name?: string
+on?:   _
+jobs?: [string]: {
+	"runs-on"?: string
+	steps?: [...]
+	...
+}
+`)
+	require.NoError(t, ciSchema.Err())
+
+	schemas := []cue.Value{k8sSchema, ciSchema}
+
+	result, err := Validate(ctx, "testdata/multi-platform", eval, schemas, ValidationOptions{
+		SkipTests: true,
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, 2, result.FilesChecked)
+	assert.Empty(t, result.SyntaxErrors)
+	assert.Empty(t, result.ContractViolations, "each policy should pass against at least one schema")
+	assert.True(t, result.Valid())
 }
 
 func TestCollectFiles(t *testing.T) {
