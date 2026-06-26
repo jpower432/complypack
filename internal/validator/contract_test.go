@@ -11,27 +11,36 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCheckContract(t *testing.T) {
+func compileClosedSchema(t *testing.T, src string) cue.Value {
+	t.Helper()
 	ctx := cuecontext.New()
-
-	// Inline Kubernetes CUE schema for testing
-	schema := ctx.CompileString(`
-apiVersion: string
-kind: string
-metadata?: {
-	name?: string
-	labels?: [string]: string
-	annotations?: [string]: string
+	val := ctx.CompileString(src)
+	require.NoError(t, val.Err())
+	root := val.LookupPath(cue.MakePath(cue.Def("Root")))
+	require.True(t, root.Exists(), "schema must define #Root")
+	return root
 }
-spec?: _
-`)
-	require.NoError(t, schema.Err())
 
-	// Inline CI CUE schema for testing top type and pattern constraints
-	ciSchema := ctx.CompileString(`
-name?: string
-on?:   _
-jobs?: [string]: #Job
+func TestCheckContract(t *testing.T) {
+	k8sSchema := compileClosedSchema(t, `
+#Root: {
+	apiVersion: string
+	kind: string
+	metadata?: {
+		name?: string
+		labels?: [string]: string
+		annotations?: [string]: string
+	}
+	spec?: _
+}
+`)
+
+	ciSchema := compileClosedSchema(t, `
+#Root: {
+	name?: string
+	on?:   _
+	jobs?: [string]: #Job
+}
 
 #Job: {
 	"runs-on"?: string
@@ -46,7 +55,10 @@ jobs?: [string]: #Job
 	...
 }
 `)
-	require.NoError(t, ciSchema.Err())
+
+	disjunctionSchema := compileClosedSchema(t, `
+#Root: {a?: string} | {b?: string}
+`)
 
 	tests := []struct {
 		name           string
@@ -56,7 +68,7 @@ jobs?: [string]: #Job
 	}{
 		{
 			name:   "valid contract - references exist",
-			schema: schema,
+			schema: k8sSchema,
 			src: `package example
 import rego.v1
 
@@ -70,7 +82,7 @@ deny contains msg if {
 		},
 		{
 			name:   "missing path flagged",
-			schema: schema,
+			schema: k8sSchema,
 			src: `package example
 import rego.v1
 
@@ -82,7 +94,7 @@ deny contains msg if {
 		},
 		{
 			name:   "dynamic refs skipped",
-			schema: schema,
+			schema: k8sSchema,
 			src: `package example
 import rego.v1
 
@@ -95,7 +107,7 @@ deny contains msg if {
 		},
 		{
 			name:   "multiple violations",
-			schema: schema,
+			schema: k8sSchema,
 			src: `package example
 import rego.v1
 
@@ -108,7 +120,7 @@ deny contains msg if {
 		},
 		{
 			name:   "input reference is valid",
-			schema: schema,
+			schema: k8sSchema,
 			src: `package example
 import rego.v1
 
@@ -157,7 +169,7 @@ deny contains msg if {
 		},
 		{
 			name:   "K8s pattern constraint - metadata.labels.app is valid",
-			schema: schema,
+			schema: k8sSchema,
 			src: `package example
 import rego.v1
 
@@ -168,13 +180,61 @@ deny contains msg if {
 			wantViolations: 0,
 		},
 		{
-			name:   "strict CI schema - arbitrary top-level key is rejected",
+			name:   "closed schema rejects arbitrary top-level key",
 			schema: ciSchema,
 			src: `package example
 import rego.v1
 
 deny contains msg if {
 	input.completely_bogus
+	msg := "test"
+}`,
+			wantViolations: 1,
+		},
+		{
+			name:   "disjunction - field in first branch is valid",
+			schema: disjunctionSchema,
+			src: `package example
+import rego.v1
+
+deny contains msg if {
+	input.a
+	msg := "test"
+}`,
+			wantViolations: 0,
+		},
+		{
+			name:   "disjunction - field in second branch is valid",
+			schema: disjunctionSchema,
+			src: `package example
+import rego.v1
+
+deny contains msg if {
+	input.b
+	msg := "test"
+}`,
+			wantViolations: 0,
+		},
+		{
+			name:   "disjunction - field in neither branch is rejected",
+			schema: disjunctionSchema,
+			src: `package example
+import rego.v1
+
+deny contains msg if {
+	input.c
+	msg := "test"
+}`,
+			wantViolations: 1,
+		},
+		{
+			name:   "closed definition rejects bogus nested path",
+			schema: k8sSchema,
+			src: `package example
+import rego.v1
+
+deny contains msg if {
+	input.metadata.bogus_field
 	msg := "test"
 }`,
 			wantViolations: 1,
@@ -187,7 +247,6 @@ deny contains msg if {
 			require.NoError(t, err)
 			assert.Len(t, violations, tt.wantViolations)
 
-			// Check that violations contain path and location
 			for _, v := range violations {
 				assert.NotEmpty(t, v.Path, "violation should have path")
 				assert.NotEmpty(t, v.Location, "violation should have location")
@@ -200,8 +259,7 @@ deny contains msg if {
 
 func TestCheckContractInvalidRego(t *testing.T) {
 	ctx := cuecontext.New()
-	schema := ctx.CompileString(`package kubernetes
-apiVersion: string
+	schema := ctx.CompileString(`apiVersion: string
 kind: string`)
 	require.NoError(t, schema.Err())
 
@@ -213,4 +271,34 @@ allow {  // Missing import rego.v1 and malformed
 	_, err := CheckContract("test.rego", src, schema)
 	assert.Error(t, err, "should return error for invalid Rego")
 	assert.Contains(t, err.Error(), "failed to parse Rego")
+}
+
+func FuzzPathExistsInSchema(f *testing.F) {
+	schema := compileClosedSchema(&testing.T{}, `
+#Root: {
+	apiVersion: string
+	kind: string
+	metadata?: {
+		name?: string
+		namespace?: string
+		labels?: [string]: string
+	}
+	spec?: _
+}
+`)
+
+	f.Add("input.apiVersion")
+	f.Add("input.metadata.name")
+	f.Add("input.metadata.labels.app")
+	f.Add("input.spec.replicas")
+	f.Add("input.nonexistent")
+	f.Add("input")
+	f.Add("input.metadata.name.too.deep")
+	f.Add("")
+	f.Add("input....")
+	f.Add("input.metadata..name")
+
+	f.Fuzz(func(t *testing.T, path string) {
+		_ = pathExistsInSchema(path, schema)
+	})
 }

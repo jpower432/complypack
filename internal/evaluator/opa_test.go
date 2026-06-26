@@ -6,6 +6,7 @@ import (
 	"context"
 	"testing"
 
+	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -43,16 +44,19 @@ allow {  # Missing import rego.v1
 func TestOPA_CheckContract(t *testing.T) {
 	opa := &OPA{}
 
-	// Inline Kubernetes CUE schema
 	ctx := cuecontext.New()
-	schema := ctx.CompileString(`
-apiVersion: string
-kind: string
-metadata?: {
-	name?: string
+	val := ctx.CompileString(`
+#Root: {
+	apiVersion: string
+	kind: string
+	metadata?: {
+		name?: string
+	}
 }
 `)
-	require.NoError(t, schema.Err())
+	require.NoError(t, val.Err())
+	schema := val.LookupPath(cue.MakePath(cue.Def("Root")))
+	require.True(t, schema.Exists())
 
 	t.Run("valid contract", func(t *testing.T) {
 		src := `package example

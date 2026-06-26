@@ -17,36 +17,40 @@ func loadTestCUESchemaInline(t *testing.T) cue.Value {
 	t.Helper()
 	ctx := cuecontext.New()
 	val := ctx.CompileString(`
-apiVersion?: string
-kind?:       string
-metadata?: {
-	name?:        string
-	namespace?:   string
-	labels?:      [string]: string
-	annotations?: [string]: string
-}
-spec?: {
-	replicas?: int
-	template?: {
-		spec?: {
-			containers?: [...{
-				name?:  string
-				image?: string
-				...
-			}]
-			...
-		}
+#Root: {
+	apiVersion?: string
+	kind?:       string
+	metadata?: {
+		name?:        string
+		namespace?:   string
+		labels?:      [string]: string
+		annotations?: [string]: string
 	}
-	containers?: [...{
-		name?:  string
-		image?: string
+	spec?: {
+		replicas?: int
+		template?: {
+			spec?: {
+				containers?: [...{
+					name?:  string
+					image?: string
+					...
+				}]
+				...
+			}
+		}
+		containers?: [...{
+			name?:  string
+			image?: string
+			...
+		}]
 		...
-	}]
-	...
+	}
 }
 `)
 	require.NoError(t, val.Err())
-	return val
+	root := val.LookupPath(cue.MakePath(cue.Def("Root")))
+	require.True(t, root.Exists())
+	return root
 }
 
 func TestValidate_ValidPolicies(t *testing.T) {
@@ -143,35 +147,7 @@ func TestValidate_NonexistentDirectory(t *testing.T) {
 func TestValidate_MultiSchema(t *testing.T) {
 	ctx := context.Background()
 	eval := &evaluator.OPA{}
-
-	cueCtx := cuecontext.New()
-
-	k8sSchema := cueCtx.CompileString(`
-apiVersion?: string
-kind?:       string
-metadata?: {
-	name?:      string
-	namespace?: string
-}
-spec?: {
-	replicas?: int
-	template?: _
-}
-`)
-	require.NoError(t, k8sSchema.Err())
-
-	ciSchema := cueCtx.CompileString(`
-name?: string
-on?:   _
-jobs?: [string]: {
-	"runs-on"?: string
-	steps?: [...]
-	...
-}
-`)
-	require.NoError(t, ciSchema.Err())
-
-	schemas := []cue.Value{k8sSchema, ciSchema}
+	schemas := multiPlatformSchemas(t)
 
 	result, err := Validate(ctx, "testdata/multi-platform", eval, schemas, ValidationOptions{
 		SkipTests: true,
@@ -184,38 +160,51 @@ jobs?: [string]: {
 	assert.True(t, result.Valid())
 }
 
-func TestValidate_MultiSchema_AllReject(t *testing.T) {
-	ctx := context.Background()
-	eval := &evaluator.OPA{}
-
+func compileClosedSchema(t *testing.T, src string) cue.Value {
+	t.Helper()
 	cueCtx := cuecontext.New()
-
-	k8sSchema := cueCtx.CompileString(`
-apiVersion?: string
-kind?:       string
-metadata?: {
-	name?:      string
-	namespace?: string
+	val := cueCtx.CompileString(src)
+	require.NoError(t, val.Err())
+	root := val.LookupPath(cue.MakePath(cue.Def("Root")))
+	require.True(t, root.Exists(), "schema must define #Root")
+	return root
 }
-spec?: {
-	replicas?: int
-	template?: _
+
+func multiPlatformSchemas(t *testing.T) []cue.Value {
+	t.Helper()
+	k8s := compileClosedSchema(t, `
+#Root: {
+	apiVersion?: string
+	kind?:       string
+	metadata?: {
+		name?:      string
+		namespace?: string
+	}
+	spec?: {
+		replicas?: int
+		template?: _
+	}
 }
 `)
-	require.NoError(t, k8sSchema.Err())
-
-	ciSchema := cueCtx.CompileString(`
-name?: string
-on?:   _
-jobs?: [string]: {
+	ci := compileClosedSchema(t, `
+#Root: {
+	name?: string
+	on?:   _
+	jobs?: [string]: #Job
+}
+#Job: {
 	"runs-on"?: string
 	steps?: [...]
 	...
 }
 `)
-	require.NoError(t, ciSchema.Err())
+	return []cue.Value{k8s, ci}
+}
 
-	schemas := []cue.Value{k8sSchema, ciSchema}
+func TestValidate_MultiSchema_AllReject(t *testing.T) {
+	ctx := context.Background()
+	eval := &evaluator.OPA{}
+	schemas := multiPlatformSchemas(t)
 
 	result, err := Validate(ctx, "testdata/multi-platform-violation", eval, schemas, ValidationOptions{
 		SkipTests: true,
@@ -230,35 +219,7 @@ jobs?: [string]: {
 func TestValidate_MultiSchema_MixedFields(t *testing.T) {
 	ctx := context.Background()
 	eval := &evaluator.OPA{}
-
-	cueCtx := cuecontext.New()
-
-	k8sSchema := cueCtx.CompileString(`
-apiVersion?: string
-kind?:       string
-metadata?: {
-	name?:      string
-	namespace?: string
-}
-spec?: {
-	replicas?: int
-	template?: _
-}
-`)
-	require.NoError(t, k8sSchema.Err())
-
-	ciSchema := cueCtx.CompileString(`
-name?: string
-on?:   _
-jobs?: [string]: {
-	"runs-on"?: string
-	steps?: [...]
-	...
-}
-`)
-	require.NoError(t, ciSchema.Err())
-
-	schemas := []cue.Value{k8sSchema, ciSchema}
+	schemas := multiPlatformSchemas(t)
 
 	result, err := Validate(ctx, "testdata/mixed-fields", eval, schemas, ValidationOptions{
 		SkipTests: true,
