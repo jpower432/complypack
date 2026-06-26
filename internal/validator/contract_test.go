@@ -7,29 +7,46 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
-	"github.com/complytime/complypack/schemas"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCheckContract(t *testing.T) {
-	// Load kubernetes CUE schema for testing
-	cueSrc, err := schemas.GetBuiltInCUESchema("kubernetes")
-	require.NoError(t, err)
-
 	ctx := cuecontext.New()
-	compiled := ctx.CompileBytes(cueSrc)
-	require.NoError(t, compiled.Err())
 
-	// Use the compiled schema directly - it contains the field definitions
-	schema := compiled
+	// Inline Kubernetes CUE schema for testing
+	schema := ctx.CompileString(`
+apiVersion: string
+kind: string
+metadata?: {
+	name?: string
+	labels?: [string]: string
+	annotations?: [string]: string
+}
+spec?: _
+`)
+	require.NoError(t, schema.Err())
 
-	// Load CI CUE schema for testing top type and pattern constraints
-	ciSrc, err := schemas.GetBuiltInCUESchema("ci")
-	require.NoError(t, err)
-	ciCompiled := ctx.CompileBytes(ciSrc)
-	require.NoError(t, ciCompiled.Err())
-	ciSchema := ciCompiled
+	// Inline CI CUE schema for testing top type and pattern constraints
+	ciSchema := ctx.CompileString(`
+name?: string
+on?:   _
+jobs?: [string]: #Job
+
+#Job: {
+	"runs-on"?: string
+	steps?: [...#Step]
+	...
+}
+
+#Step: {
+	uses?: string
+	run?:  string
+	name?: string
+	...
+}
+`)
+	require.NoError(t, ciSchema.Err())
 
 	tests := []struct {
 		name           string
@@ -151,7 +168,7 @@ deny contains msg if {
 			wantViolations: 0,
 		},
 		{
-			name:   "CI open schema - arbitrary top-level key is valid",
+			name:   "strict CI schema - arbitrary top-level key is rejected",
 			schema: ciSchema,
 			src: `package example
 import rego.v1
@@ -160,8 +177,7 @@ deny contains msg if {
 	input.completely_bogus
 	msg := "test"
 }`,
-			// CI schema has [string]: #Job | [...string] | _ which accepts any key
-			wantViolations: 0,
+			wantViolations: 1,
 		},
 	}
 
