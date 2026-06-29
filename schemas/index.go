@@ -29,10 +29,11 @@ func LoadIndex() (map[string]IndexEntry, error) {
 }
 
 // Platforms returns a sorted list of all platform names in the index.
+// Panics if the embedded index fails to parse (build-time bug).
 func Platforms() []string {
 	index, err := LoadIndex()
 	if err != nil {
-		return nil
+		panic(fmt.Sprintf("embedded schema index is invalid: %v", err))
 	}
 	platforms := make([]string, 0, len(index))
 	for name := range index {

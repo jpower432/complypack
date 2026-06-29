@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 
 	"cuelang.org/go/cue"
 	"github.com/complytime/complypack/internal/config"
@@ -164,6 +165,11 @@ func runPrePackValidation(ctx context.Context, cfg *config.ComplyPackConfig, con
 
 			s, err := schemaReg.Load(ctx, source, ref.Platform)
 			if err != nil {
+				if source == "" {
+					slog.Warn("no schema available for platform, skipping",
+						"platform", ref.Platform, "error", err)
+					continue
+				}
 				return fmt.Errorf("loading CUE schema for %s: %w", ref.Platform, err)
 			}
 			cueSchemas = append(cueSchemas, s.CUE)
