@@ -9,7 +9,7 @@ import (
 
 // SchemaRef represents a platform schema with its source and platform identifier.
 type SchemaRef struct {
-	// Platform identifies the target platform (e.g., "kubernetes", "terraform")
+	// Platform identifies the target platform (e.g., "kubernetes-deployment", "ci-github-actions")
 	Platform string `yaml:"platform"`
 
 	// Source is a URI specifying where to load the schema from.
